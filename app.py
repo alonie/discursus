@@ -1,7 +1,7 @@
 import gradio as gr
 import os
 
-ICON_PATH = "Discursus_logo_23Sep25.png"  # Place Discursus_logo_23Sep25.png in the same directory as app.py
+ICON_PATH = "Discursus_logo_med_23Sep25.png"  # Place Discursus_logo_23Sep25.png in the same directory as app.py
 
 def hello(name): 
     return f"Hello, {name or 'world'}!"
