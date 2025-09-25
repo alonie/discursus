@@ -6,9 +6,12 @@ ICON_PATH = "Discursus_logo_23Sep25.png"  # Place Discursus_logo_23Sep25.png in 
 def hello(name): 
     return f"Hello, {name or 'world'}!"
 
-FAVICON_PATH = ICON_PATH if os.path.exists(ICON_PATH) else None
+with gr.Blocks(title="Discursus") as demo:
+    with gr.Row():
+        gr.Image(value=ICON_PATH, show_download_button=False, interactive=False, show_label=False)
+    gr.Interface(fn=hello, inputs="text", outputs="text")
 
-demo = gr.Interface(fn=hello, inputs="text", outputs="text", title="Hello World")
+#demo = gr.Interface(fn=hello, inputs="text", outputs="text", title="Hello World")
 
 if __name__ == "__main__":
     demo.launch(
