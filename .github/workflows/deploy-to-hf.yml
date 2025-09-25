@@ -14,7 +14,7 @@ jobs:
           fetch-depth: 0
       - name: Push to Hugging Face Space
         run: |
-          git remote add space https://huggingface.co/spaces/alonie/Discursus.git
+          git remote add space https://alonie:$HF_TOKEN@huggingface.co/spaces/alonie/Discursus.git
           git push space main --force
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
