@@ -18,3 +18,12 @@ jobs:
           git push space main --force
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
+
+      - name: Push LFS objects to Hugging Face
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          git lfs install --local
+          git lfs fetch --all
+          git lfs checkout
+          git lfs push space main --all
