@@ -1,10 +1,12 @@
 import gradio as gr
 import os
 
+ICON_PATH = "Discursus_logo_23Sep25.png"  # Place icon.png in the same directory as app.py
+
 def hello(name): 
     return f"Hello, {name or 'world'}!"
 
-demo = gr.Interface(fn=hello, inputs="text", outputs="text", title="Hello World")
+demo = gr.Interface(fn=hello, inputs="text", outputs="text", title="Hello World", favicon_path=ICON_PATH)
 
 if __name__ == "__main__":
     demo.launch(
