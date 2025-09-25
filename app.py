@@ -8,7 +8,7 @@ def hello(name):
 
 FAVICON_PATH = ICON_PATH if os.path.exists(ICON_PATH) else None
 
-demo = gr.Interface(fn=hello, inputs="text", outputs="text", title="Hello World", favicon_path=FAVICON_PATH)
+demo = gr.Interface(fn=hello, inputs="text", outputs="text", title="Hello World")
 
 if __name__ == "__main__":
     demo.launch(
