@@ -116,7 +116,7 @@ def stream_model(messages: List[dict], model_name: str) -> Generator[str, None, 
                     continue
         yield from _stream_logic(gemini_streamer())
 
-def critique_and_review(user_question: str, primary_model: str, critique_model: str, history: List[Tuple[str, str]], uploaded_files) -> Generator[Tuple[List[Tuple[str, str]], str, str], None, None]:
+def critique_and_review(user_question: str, primary_model: str, critique_model: str, history: List[Tuple[str, str]], uploaded_files) -> Generator[Tuple[List[Tuple[str, str]], str, str, gr.update, gr.update], None, None]:
     """Execute a full Critique-and-Review cycle."""
     complete_prompt = build_prompt_with_context(user_question, uploaded_files)
     
@@ -147,24 +147,21 @@ def critique_and_review(user_question: str, primary_model: str, critique_model: 
         critique_response += chunk
         yield history, primary_output + primary_response, critique_output + critique_response, gr.update(), gr.update()
 
-    # Use a blockquote for the revised response to make it visually distinct
     primary_output += primary_response + "\n\n---\n\n> ### ✨ Revised Response\n> **Model:** " + primary_model + "\n\n"
     yield history, primary_output, critique_output + critique_response, gr.update(), gr.update()
     
     review_context = critique_context + [{"role": "user", "content": critique_response}]
     final_response = ""
     for chunk in stream_model(review_context, primary_model):
-        # Prepend each line of the chunk with '>' for the blockquote
         final_response += chunk
         indented_chunk = "> " + chunk.replace("\n", "\n> ")
         yield history, primary_output + indented_chunk, critique_output + critique_response, gr.update(), gr.update()
 
     updated_history = history + [(user_question, final_response)]
     
-    # Final yield to clear the input box for the next question
     yield updated_history, primary_output, critique_output + critique_response, gr.update(value="", placeholder="Enter a follow-up question..."), gr.update(value=None)
 
-def single_reply(user_question: str, primary_model: str, history: List[Tuple[str, str]], uploaded_files) -> Generator[Tuple[List[Tuple[str, str]], str, str], None, None]:
+def single_reply(user_question: str, primary_model: str, history: List[Tuple[str, str]], uploaded_files) -> Generator[Tuple[List[Tuple[str, str]], str, str, gr.update, gr.update], None, None]:
     """Produce a single-model reply."""
     complete_prompt = build_prompt_with_context(user_question, uploaded_files)
     
@@ -188,35 +185,35 @@ def single_reply(user_question: str, primary_model: str, history: List[Tuple[str
 
     updated_history = history + [(user_question, primary_response)]
     
-    # Final yield to clear the input box for the next question
     yield updated_history, primary_output + primary_response, critique_output, gr.update(value="", placeholder="Enter a follow-up question..."), gr.update(value=None)
 
-# Create Gradio Interface
 with gr.Blocks(title="Discursus: Critique-and-Review", theme=gr.themes.Soft()) as demo:
     gr.Markdown("# 🎭 Discursus: Critique-and-Review System")
     
     with gr.Row():
         primary_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Claude 4.5 Sonnet", label="🤖 Primary Model", scale=1)
         critique_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Gemini 2.5 Pro", label="🔍 Critique Model", scale=1)
-        file_upload = gr.File(label="📎 Context Files", file_count="multiple", file_types=["text", ".md", ".py", ".csv", ".json"], scale=1)
 
     with gr.Row():
         with gr.Column(scale=4):
             user_input = gr.Textbox(lines=4, value=SUGGESTED_QUESTION, label="Question", placeholder="Enter your question or modify the suggested one...")
         with gr.Column(scale=1):
-            cr_btn = gr.Button("🚀 Critique & Review", variant="primary")
-            single_btn = gr.Button("💬 Single Reply")
-            reset_btn = gr.Button("🔄 Reset")
+            with gr.Row():
+                cr_btn = gr.Button("🚀 C&R", variant="primary")
+                single_btn = gr.Button("💬 Single",)
+                reset_btn = gr.Button("🔄 Reset")
+                upload_btn = gr.UploadButton("📎", file_count="multiple", file_types=["text", ".md", ".py", ".csv", ".json"])
+            file_status = gr.Textbox(label="Uploaded Files", interactive=False, placeholder="No files uploaded")
 
     with gr.Row():
         primary_output = gr.Textbox(label="Primary Model", lines=30, max_lines=30, autoscroll=True, interactive=False, show_copy_button=True)
         critique_output = gr.Textbox(label="Critique Model", lines=30, max_lines=30, autoscroll=True, interactive=False, show_copy_button=True)
     
     conversation_state = gr.State([])
+    file_state = gr.State([])
 
     def handle_cr_click(user_question, p_model, c_model, history, files):
         if not user_question.strip(): 
-            # Create a dummy generator if input is empty
             yield history, "", "", gr.update(), gr.update()
             return
         for result in critique_and_review(user_question, p_model, c_model, history, files):
@@ -224,18 +221,24 @@ with gr.Blocks(title="Discursus: Critique-and-Review", theme=gr.themes.Soft()) a
 
     def handle_single_click(user_question, p_model, history, files):
         if not user_question.strip(): 
-            # Create a dummy generator if input is empty
             yield history, "", "", gr.update(), gr.update()
             return
         for result in single_reply(user_question, p_model, history, files):
             yield result
 
     def handle_reset():
-        return [], "", "", SUGGESTED_QUESTION, None
+        return [], "", "", SUGGESTED_QUESTION, None, "No files uploaded"
 
-    cr_btn.click(handle_cr_click, [user_input, primary_model, critique_model, conversation_state, file_upload], [conversation_state, primary_output, critique_output, user_input, file_upload])
-    single_btn.click(handle_single_click, [user_input, primary_model, conversation_state, file_upload], [conversation_state, primary_output, critique_output, user_input, file_upload])
-    reset_btn.click(handle_reset, outputs=[conversation_state, primary_output, critique_output, user_input, file_upload])
+    def update_file_status(files):
+        if not files:
+            return "No files uploaded"
+        return "\n".join([os.path.basename(f.name) for f in files])
+
+    upload_btn.upload(update_file_status, upload_btn, file_status)
+    
+    cr_btn.click(handle_cr_click, [user_input, primary_model, critique_model, conversation_state, upload_btn], [conversation_state, primary_output, critique_output, user_input, file_state])
+    single_btn.click(handle_single_click, [user_input, primary_model, conversation_state, upload_btn], [conversation_state, primary_output, critique_output, user_input, file_state])
+    reset_btn.click(handle_reset, outputs=[conversation_state, primary_output, critique_output, user_input, file_state, file_status])
 
 if __name__ == "__main__":
     demo.launch(server_name="0.0.0.0", server_port=int(os.getenv("PORT", 7860)), share=False)
