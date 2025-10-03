@@ -101,14 +101,19 @@ def stream_model(messages: List[dict], model_name: str) -> Generator[str, None, 
     
     elif provider == "gemini":
         genai = get_gemini_client()
+        
+        # Proper Gemini safety settings format
+        from google.generativeai.types import HarmCategory, HarmBlockThreshold
+        safety_settings = {
+            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+        }
+        
         model = genai.GenerativeModel(
             model_id,
-            safety_settings={
-                'HARASSMENT': 'BLOCK_NONE',
-                'HATE_SPEECH': 'BLOCK_NONE',
-                'SEXUALLY_EXPLICIT': 'BLOCK_NONE',
-                'DANGEROUS_CONTENT': 'BLOCK_NONE'
-            }
+            safety_settings=safety_settings
         )
         
         # Convert messages to Gemini format
@@ -218,7 +223,7 @@ with gr.Blocks(title="Discursus: Critique-and-Review", theme=gr.themes.Soft()) a
             )
             critique_model = gr.Dropdown(
                 choices=list(MODEL_MAP.keys()),
-                value="GPT-5",
+                value="Gemini 2.5 Pro",
                 label="🔍 Critique Model"
             )
     
