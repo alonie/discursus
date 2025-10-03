@@ -5,6 +5,7 @@ from typing import List, Tuple, Generator
 # Lazy-load API clients
 _anthropic_client = None
 _openai_client = None
+_gemini_client = None
 
 def get_anthropic_client():
     global _anthropic_client
@@ -20,40 +21,72 @@ def get_openai_client():
         _openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     return _openai_client
 
+def get_gemini_client():
+    global _gemini_client
+    if _gemini_client is None:
+        import google.generativeai as genai
+        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+        _gemini_client = genai
+    return _gemini_client
+
 DEFAULT_QUESTION = """A mid-sized country faces a resurgence of a novel respiratory virus. Vaccination rates have plateaued between 45-65%, ICU capacity varies between 75-95% across regions, and economic recovery remains fragile. Recent epidemiological studies suggest transmission rates may be 30-60% higher than initial models predicted. The government is considering reintroducing strict lockdowns for 4-8 weeks to suppress transmission before winter. Should it do so? Justify your position with evidence-backed analysis of epidemiological risk, economic stability, civil liberties, and public trust. Provide specific citations for key empirical claims and measurable predictions your approach would generate."""
 
-def stream_anthropic(messages: List[dict]) -> Generator[str, None, str]:
-    """Stream from Anthropic Claude API"""
-    client = get_anthropic_client()
-    full_response = ""
-    
-    with client.messages.stream(
-        model="claude-sonnet-4-20250514",
-        max_tokens=2000,
-        messages=messages
-    ) as stream:
-        for text in stream.text_stream:
-            full_response += text
-            yield full_response
-    
-    return full_response
+MODEL_MAP = {
+    "Claude 4.5 Sonnet": ("anthropic", "claude-sonnet-4-20250514"),
+    "GPT-5": ("openai", "gpt-5"),
+    "GPT-5 Mini": ("openai", "gpt-5-mini"),
+    "Gemini 2.5 Flash": ("gemini", "gemini-2.5-flash"),
+    "Gemini 2.5 Pro": ("gemini", "gemini-2.5-pro")
+}
 
-def stream_openai(messages: List[dict]) -> Generator[str, None, str]:
-    """Stream from OpenAI GPT API"""
-    client = get_openai_client()
+def stream_model(messages: List[dict], model_name: str) -> Generator[str, None, str]:
+    """Stream from any model"""
+    provider, model_id = MODEL_MAP[model_name]
     full_response = ""
     
-    stream = client.chat.completions.create(
-        model="gpt-4o",
-        messages=messages,
-        max_tokens=2000,
-        stream=True
-    )
+    if provider == "anthropic":
+        client = get_anthropic_client()
+        with client.messages.stream(
+            model=model_id,
+            max_tokens=2000,
+            messages=messages
+        ) as stream:
+            for text in stream.text_stream:
+                full_response += text
+                yield full_response
     
-    for chunk in stream:
-        if chunk.choices[0].delta.content:
-            full_response += chunk.choices[0].delta.content
-            yield full_response
+    elif provider == "openai":
+        client = get_openai_client()
+        stream = client.chat.completions.create(
+            model=model_id,
+            messages=messages,
+            max_tokens=2000,
+            stream=True
+        )
+        for chunk in stream:
+            if chunk.choices[0].delta.content:
+                full_response += chunk.choices[0].delta.content
+                yield full_response
+    
+    elif provider == "gemini":
+        genai = get_gemini_client()
+        model = genai.GenerativeModel(model_id)
+        
+        # Convert messages to Gemini format
+        gemini_messages = []
+        for msg in messages:
+            role = "user" if msg["role"] == "user" else "model"
+            gemini_messages.append({"role": role, "parts": [msg["content"]]})
+        
+        response = model.generate_content(
+            gemini_messages,
+            stream=True
+        )
+        
+        for chunk in response:
+            if chunk.text:
+                full_response += chunk.text
+                yield full_response
     
     return full_response
 
@@ -62,10 +95,10 @@ def critique_and_review(
     primary_model: str,
     critique_model: str,
     history: List[Tuple[str, str]]
-) -> Generator[Tuple[List[Tuple[str, str]], str], None, None]:
+) -> Generator[Tuple[List[Tuple[str, str]], str, str], None, None]:
     """
     Execute single round of Critique-and-Review with streaming
-    Yields: (updated_history, display_output)
+    Yields: (updated_history, primary_output, critique_output)
     """
     
     # Build conversation history
@@ -77,101 +110,84 @@ def critique_and_review(
     messages.append({"role": "user", "content": user_prompt})
     
     # Step 1: Primary Response
-    output = "### 🤖 Primary Response\n**Model:** " + primary_model + "\n\n"
-    yield history, output
+    primary_output = f"### 🤖 Initial Response\n**Model:** {primary_model}\n\n"
+    critique_output = ""
+    yield history, primary_output, critique_output
     
     primary_response = ""
-    if primary_model == "Claude (Anthropic)":
-        for chunk in stream_anthropic(messages):
-            primary_response = chunk
-            yield history, output + chunk
-    else:
-        for chunk in stream_openai(messages):
-            primary_response = chunk
-            yield history, output + chunk
-    
-    output += primary_response + "\n\n---\n\n"
+    for chunk in stream_model(messages, primary_model):
+        primary_response = chunk
+        yield history, primary_output + chunk, critique_output
     
     # Step 2: Critique
-    output += "### 🔍 Critique\n**Model:** " + critique_model + "\n\n"
-    yield history, output
+    critique_output = f"### 🔍 Critique\n**Model:** {critique_model}\n\n"
+    yield history, primary_output + primary_response, critique_output
     
     critique_context = messages + [{"role": "assistant", "content": primary_response}]
     
     critique_response = ""
-    if critique_model == "Claude (Anthropic)":
-        for chunk in stream_anthropic(critique_context):
-            critique_response = chunk
-            yield history, output + chunk
-    else:
-        for chunk in stream_openai(critique_context):
-            critique_response = chunk
-            yield history, output + chunk
-    
-    output += critique_response + "\n\n---\n\n"
+    for chunk in stream_model(critique_context, critique_model):
+        critique_response = chunk
+        yield history, primary_output + primary_response, critique_output + chunk
     
     # Step 3: Revised Response
-    output += "### ✨ Revised Response\n**Model:** " + primary_model + "\n\n"
-    yield history, output
+    primary_output += primary_response + "\n\n---\n\n### ✨ Revised Response\n**Model:** " + primary_model + "\n\n"
+    yield history, primary_output, critique_output + critique_response
     
     review_context = critique_context + [{"role": "user", "content": critique_response}]
     
     final_response = ""
-    if primary_model == "Claude (Anthropic)":
-        for chunk in stream_anthropic(review_context):
-            final_response = chunk
-            yield history, output + chunk
-    else:
-        for chunk in stream_openai(review_context):
-            final_response = chunk
-            yield history, output + chunk
+    for chunk in stream_model(review_context, primary_model):
+        final_response = chunk
+        yield history, primary_output + chunk, critique_output + critique_response
     
     # Update history with final response
     updated_history = history + [(user_prompt, final_response)]
     
-    yield updated_history, output
+    yield updated_history, primary_output + final_response, critique_output + critique_response
 
 def reset_conversation():
     """Reset conversation state"""
-    return [], ""
+    return [], "", ""
 
 # Create Gradio Interface
-with gr.Blocks(title="Discursus: Critique-and-Review") as demo:
+with gr.Blocks(title="Discursus: Critique-and-Review", theme=gr.themes.Soft()) as demo:
     gr.Markdown("""
-    # Discursus: Critique-and-Review System
+    # 🎭 Discursus: Critique-and-Review System
     
-    This system runs a single round of deliberative critique between two LLMs:
-    1. **Primary LLM** generates initial response (streaming)
-    2. **Critique LLM** reviews and critiques the response (streaming)
-    3. **Primary LLM** revises its position based on critique (streaming)
+    Multi-model deliberation system: Primary model generates response → Critique model reviews → Primary model revises
     """)
     
     with gr.Row():
         with gr.Column(scale=1):
             primary_model = gr.Dropdown(
-                choices=["Claude (Anthropic)", "GPT-4 (OpenAI)"],
-                value="Claude (Anthropic)",
-                label="Primary Model"
+                choices=list(MODEL_MAP.keys()),
+                value="Claude 4.5 Sonnet",
+                label="🤖 Primary Model"
             )
             critique_model = gr.Dropdown(
-                choices=["GPT-4 (OpenAI)", "Claude (Anthropic)"],
-                value="GPT-4 (OpenAI)",
-                label="Critique Model"
+                choices=list(MODEL_MAP.keys()),
+                value="GPT-4o",
+                label="🔍 Critique Model"
             )
-        
-        with gr.Column(scale=3):
-            user_input = gr.Textbox(
-                lines=8,
-                value=DEFAULT_QUESTION,
-                label="Your Question",
-                placeholder="Enter your question here..."
-            )
+    
+    user_input = gr.Textbox(
+        lines=6,
+        value=DEFAULT_QUESTION,
+        label="Your Question",
+        placeholder="Enter your question here..."
+    )
     
     with gr.Row():
-        submit_btn = gr.Button("Run Critique-and-Review", variant="primary")
-        reset_btn = gr.Button("Reset Conversation")
+        submit_btn = gr.Button("▶️ Run Critique-and-Review", variant="primary", size="lg")
+        reset_btn = gr.Button("🔄 Reset", size="lg")
     
-    output_display = gr.Markdown(label="Deliberation Output")
+    with gr.Row():
+        with gr.Column(scale=1):
+            primary_output = gr.Markdown(label="Primary Model", container=True)
+        
+        with gr.Column(scale=1):
+            critique_output = gr.Markdown(label="Critique Model", container=True)
     
     # Hidden state for conversation history
     conversation_state = gr.State([])
@@ -179,12 +195,12 @@ with gr.Blocks(title="Discursus: Critique-and-Review") as demo:
     submit_btn.click(
         fn=critique_and_review,
         inputs=[user_input, primary_model, critique_model, conversation_state],
-        outputs=[conversation_state, output_display]
+        outputs=[conversation_state, primary_output, critique_output]
     )
     
     reset_btn.click(
         fn=reset_conversation,
-        outputs=[conversation_state, output_display]
+        outputs=[conversation_state, primary_output, critique_output]
     )
 
 if __name__ == "__main__":
