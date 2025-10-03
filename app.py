@@ -40,9 +40,11 @@ MODEL_MAP = {
 }
 
 def stream_model(messages: List[dict], model_name: str) -> Generator[str, None, str]:
-    """Stream from any model"""
+    """Stream from any model with batched updates for smoother display"""
     provider, model_id = MODEL_MAP[model_name]
     full_response = ""
+    batch = ""
+    batch_size = 5  # Accumulate tokens before yielding
     
     if provider == "anthropic":
         client = get_anthropic_client()
@@ -52,7 +54,14 @@ def stream_model(messages: List[dict], model_name: str) -> Generator[str, None, 
             messages=messages
         ) as stream:
             for text in stream.text_stream:
-                full_response += text
+                batch += text
+                if len(batch) >= batch_size:
+                    full_response += batch
+                    batch = ""
+                    yield full_response
+            # Yield remaining batch
+            if batch:
+                full_response += batch
                 yield full_response
     
     elif provider == "openai":
@@ -65,8 +74,15 @@ def stream_model(messages: List[dict], model_name: str) -> Generator[str, None, 
         )
         for chunk in stream:
             if chunk.choices[0].delta.content:
-                full_response += chunk.choices[0].delta.content
-                yield full_response
+                batch += chunk.choices[0].delta.content
+                if len(batch) >= batch_size:
+                    full_response += batch
+                    batch = ""
+                    yield full_response
+        # Yield remaining batch
+        if batch:
+            full_response += batch
+            yield full_response
     
     elif provider == "gemini":
         genai = get_gemini_client()
@@ -85,8 +101,15 @@ def stream_model(messages: List[dict], model_name: str) -> Generator[str, None, 
         
         for chunk in response:
             if chunk.text:
-                full_response += chunk.text
-                yield full_response
+                batch += chunk.text
+                if len(batch) >= batch_size:
+                    full_response += batch
+                    batch = ""
+                    yield full_response
+        # Yield remaining batch
+        if batch:
+            full_response += batch
+            yield full_response
     
     return full_response
 
