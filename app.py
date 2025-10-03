@@ -343,7 +343,6 @@ with gr.Blocks(title="Discursus: Critique-and-Review", theme=gr.themes.Soft()) a
             critique_model = gr.Dropdown(
                 choices=list(MODEL_MAP.keys()),
                 value="Gemini 2.5 Pro",
-                value="Gemini 2.5 Pro",
                 label="🔍 Critique Model"
             )
     
