@@ -101,7 +101,15 @@ def stream_model(messages: List[dict], model_name: str) -> Generator[str, None, 
     
     elif provider == "gemini":
         genai = get_gemini_client()
-        model = genai.GenerativeModel(model_id)
+        model = genai.GenerativeModel(
+            model_id,
+            safety_settings={
+                'HARASSMENT': 'BLOCK_NONE',
+                'HATE_SPEECH': 'BLOCK_NONE',
+                'SEXUALLY_EXPLICIT': 'BLOCK_NONE',
+                'DANGEROUS_CONTENT': 'BLOCK_NONE'
+            }
+        )
         
         # Convert messages to Gemini format
         gemini_messages = []
@@ -115,7 +123,7 @@ def stream_model(messages: List[dict], model_name: str) -> Generator[str, None, 
         )
         
         for chunk in response:
-            if chunk.text:
+            if hasattr(chunk, 'text') and chunk.text:
                 batch += chunk.text
                 if len(batch) >= batch_size:
                     full_response += batch
@@ -167,6 +175,11 @@ def critique_and_review(
     for chunk in stream_model(critique_context, critique_model):
         critique_response = chunk
         yield history, primary_output + primary_response, critique_output + chunk
+    
+    # Validate critique response
+    if not critique_response or not critique_response.strip():
+        critique_response = "No critique provided - response was blocked or empty."
+        yield history, primary_output + primary_response, critique_output + critique_response
     
     # Step 3: Revised Response
     primary_output += primary_response + "\n\n---\n\n### ✨ Revised Response\n**Model:** " + primary_model + "\n\n"
