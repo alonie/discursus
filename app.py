@@ -1,18 +1,31 @@
 import gradio as gr
-import anthropic
-import openai
 import os
 from typing import List, Tuple
 
-# Initialize API clients
-anthropic_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# Lazy-load API clients to avoid initialization errors
+_anthropic_client = None
+_openai_client = None
+
+def get_anthropic_client():
+    global _anthropic_client
+    if _anthropic_client is None:
+        import anthropic
+        _anthropic_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    return _anthropic_client
+
+def get_openai_client():
+    global _openai_client
+    if _openai_client is None:
+        from openai import OpenAI
+        _openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    return _openai_client
 
 DEFAULT_QUESTION = """A mid-sized country faces a resurgence of a novel respiratory virus. Vaccination rates have plateaued between 45-65%, ICU capacity varies between 75-95% across regions, and economic recovery remains fragile. Recent epidemiological studies suggest transmission rates may be 30-60% higher than initial models predicted. The government is considering reintroducing strict lockdowns for 4-8 weeks to suppress transmission before winter. Should it do so? Justify your position with evidence-backed analysis of epidemiological risk, economic stability, civil liberties, and public trust. Provide specific citations for key empirical claims and measurable predictions your approach would generate."""
 
 def call_anthropic(messages: List[dict]) -> str:
     """Call Anthropic Claude API"""
-    response = anthropic_client.messages.create(
+    client = get_anthropic_client()
+    response = client.messages.create(
         model="claude-sonnet-4-20250514",
         max_tokens=2000,
         messages=messages
@@ -21,7 +34,8 @@ def call_anthropic(messages: List[dict]) -> str:
 
 def call_openai(messages: List[dict]) -> str:
     """Call OpenAI GPT API"""
-    response = openai.chat.completions.create(
+    client = get_openai_client()
+    response = client.chat.completions.create(
         model="gpt-4o",
         messages=messages,
         max_tokens=2000
