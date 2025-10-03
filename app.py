@@ -69,7 +69,7 @@ def stream_model(messages: List[dict], model_name: str) -> Generator[str, None, 
         stream = client.chat.completions.create(
             model=model_id,
             messages=messages,
-            max_tokens=2000,
+            max_completion_tokens=2000,
             stream=True
         )
         for chunk in stream:
@@ -190,7 +190,7 @@ with gr.Blocks(title="Discursus: Critique-and-Review", theme=gr.themes.Soft()) a
             )
             critique_model = gr.Dropdown(
                 choices=list(MODEL_MAP.keys()),
-                value="GPT-4o",
+                value="GPT-5",
                 label="🔍 Critique Model"
             )
     
