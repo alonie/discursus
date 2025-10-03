@@ -66,23 +66,38 @@ def stream_model(messages: List[dict], model_name: str) -> Generator[str, None, 
     
     elif provider == "openai":
         client = get_openai_client()
-        stream = client.chat.completions.create(
-            model=model_id,
-            messages=messages,
-            max_completion_tokens=2000,
-            stream=True
-        )
-        for chunk in stream:
-            if chunk.choices[0].delta.content:
-                batch += chunk.choices[0].delta.content
-                if len(batch) >= batch_size:
-                    full_response += batch
-                    batch = ""
-                    yield full_response
-        # Yield remaining batch
-        if batch:
-            full_response += batch
-            yield full_response
+        try:
+            # Try streaming first
+            stream = client.chat.completions.create(
+                model=model_id,
+                messages=messages,
+                max_completion_tokens=2000,
+                stream=True
+            )
+            for chunk in stream:
+                if chunk.choices[0].delta.content:
+                    batch += chunk.choices[0].delta.content
+                    if len(batch) >= batch_size:
+                        full_response += batch
+                        batch = ""
+                        yield full_response
+            # Yield remaining batch
+            if batch:
+                full_response += batch
+                yield full_response
+        except Exception as e:
+            # Fallback to non-streaming if organization not verified
+            if "must be verified to stream" in str(e):
+                response = client.chat.completions.create(
+                    model=model_id,
+                    messages=messages,
+                    max_completion_tokens=2000,
+                    stream=False
+                )
+                full_response = response.choices[0].message.content
+                yield full_response
+            else:
+                raise
     
     elif provider == "gemini":
         genai = get_gemini_client()
