@@ -1,6 +1,5 @@
 import gradio as gr
 import os
-import html as _html
 from typing import List, Tuple, Generator
 import re
 
@@ -60,7 +59,18 @@ def process_uploaded_files(files) -> str:
     
     return "\n".join(file_contents)
 
-def build_messages_with_context(user_prompt: str, history: List[Tuple[str, str]], uploaded_files) -> List[dict]:
+def format_bot_message(content: str, purpose: str, model_name: str) -> str:
+    """Formats a bot message with a large, bold Markdown header."""
+    purpose_map = {
+        "Response": "Primary Response",
+        "Critique": "Critique",
+        "Revision": "Revised Response"
+    }
+    # Use Markdown for a bold, larger header and a horizontal rule for separation.
+    header = f"<br>### **{purpose_map.get(purpose, purpose)}** ({model_name})\n---\n"
+    return header + content
+
+def build_messages_with_context(user_prompt: str, history: List[dict], uploaded_files) -> List[dict]:
     """Combine user prompt with history and file context into a message list."""
     messages = []
     file_context = process_uploaded_files(uploaded_files)
@@ -68,60 +78,18 @@ def build_messages_with_context(user_prompt: str, history: List[Tuple[str, str]]
         messages.append({"role": "user", "content": f"Please use the following files as context for the entire conversation:\n{file_context}\n(This is a system-level instruction and should not be repeated in your response.)"})
         messages.append({"role": "assistant", "content": "Understood. I will use the provided files as context."})
 
-    for user_msg, assistant_msg_html in history:
-        if user_msg and str(user_msg).strip():
-            messages.append({"role": "user", "content": user_msg})
-        if assistant_msg_html and str(assistant_msg_html).strip():
-            # Clean the HTML formatting before sending to the model
-            content_part = re.search(r"<div class='response-content'.*?>(.*)</div>", assistant_msg_html, re.DOTALL)
-            if content_part:
-                cleaned_msg = content_part.group(1).replace('<br>', '\n').strip()
-                messages.append({"role": "assistant", "content": cleaned_msg})
-
+    # Reconstruct the history to ensure only 'role' and 'content' are present.
+    # This strips any extra keys Gradio might add (like 'metadata').
+    for msg in history:
+        # Filter out dummy user messages used for UI justification.
+        if msg.get("content") not in ["Critique Request", "Review Request"]:
+            messages.append({
+                "role": msg["role"],
+                "content": msg["content"]
+            })
+    
     messages.append({"role": "user", "content": user_prompt})
     return messages
-
-def generate_styled_block(content: str, purpose: str, model_name: str = "") -> str:
-    """Generates a styled HTML block for a message."""
-    escaped_content = _html.escape(content).replace('\n', '<br>')
-
-    if purpose == "User":
-        return f"<div style='padding: 10px; border-radius: 10px; background-color: #e1f5fe; margin: 10px 40px 10px 5px; text-align: left; border: 1px solid #b3e5fc;'><b>You:</b><br>{escaped_content}</div>"
-
-    style_map = {
-        "Response": "background-color: #f9f9f9; border: 1px solid #ddd;",
-        "Critique": "background-color: #fffbe6; border: 1px solid #fff1b8;",
-        "Revision": "background-color: #e6ffed; border: 1px solid #b3ffc6;"
-    }
-    purpose_map = {
-        "Response": "Primary Response",
-        "Critique": "Critique",
-        "Revision": "Revised Response"
-    }
-    
-    block_style = style_map.get(purpose, style_map["Response"])
-    block_purpose = purpose_map.get(purpose, purpose)
-    
-    return f"""
-    <div style='{block_style} padding: 15px; border-radius: 8px; margin: 10px 5px 10px 40px;'>
-        <div style='font-size: 1.1em; font-weight: bold; color: #333; margin-bottom: 8px;'>
-            {block_purpose} ({model_name})
-        </div>
-        <div class='response-content' style='color: #222; line-height: 1.6;'>
-            {escaped_content}
-        </div>
-    </div>
-    """
-
-def history_to_html(history: List[Tuple[str, str]]) -> str:
-    """Converts conversation history to a single HTML string."""
-    html_string = ""
-    for user_msg, assistant_msg in history:
-        if user_msg:
-            html_string += generate_styled_block(user_msg, "User")
-        if assistant_msg:
-            html_string += assistant_msg
-    return html_string
 
 def stream_model(messages: List[dict], model_name: str) -> Generator[str, None, str]:
     """Stream from any model, handling different providers."""
@@ -173,122 +141,129 @@ def stream_model(messages: List[dict], model_name: str) -> Generator[str, None, 
                     continue
         yield from _stream_logic(gemini_streamer())
 
-def chat_turn(user_question: str, history: List[Tuple[str, str]], primary_model: str, uploaded_files) -> Generator:
+def chat_turn(user_question: str, history: List[dict], primary_model: str, uploaded_files) -> Generator:
     """A single turn in the primary chat conversation."""
-    history.append((user_question, None))
-    yield history_to_html(history), gr.update(value="")
+    history.append({"role": "user", "content": user_question})
+    history.append({"role": "assistant", "content": ""})
+    yield history, gr.update(value="")
 
-    messages = build_messages_with_context(user_question, history[:-1], uploaded_files)
+    messages = build_messages_with_context(user_question, history[:-2], uploaded_files)
     
     response_stream = stream_model(messages, primary_model)
     
     full_response = ""
     for chunk in response_stream:
         full_response += chunk
-        history[-1] = (user_question, generate_styled_block(full_response, "Response", primary_model))
-        yield history_to_html(history), gr.update(value="")
+        history[-1]["content"] = format_bot_message(full_response, "Response", primary_model)
+        yield history, gr.update(value="")
 
-def critique_and_review_workflow(history: List[Tuple[str, str]], primary_model: str, critique_model: str, uploaded_files) -> Generator:
+def critique_and_review_workflow(history: List[dict], primary_model: str, critique_model: str, uploaded_files, critique_prompt: str, review_prompt_template: str) -> Generator:
     """The full C&R workflow, displaying all output in the main display."""
     if not history:
-        history.append((None, generate_styled_block("Cannot perform critique on an empty conversation.", "Critique", "System")))
-        yield history_to_html(history)
+        history.append({"role": "assistant", "content": format_bot_message("Cannot perform critique on an empty conversation.", "Critique", "System")})
+        yield history
         return
 
     # 1. Generate Critique
-    critique_prompt = "Please provide a concise, constructive critique of the assistant's reasoning, accuracy, and helpfulness throughout the preceding conversation. Identify any potential biases, logical fallacies, or missed opportunities for a more comprehensive response."
     critique_messages = build_messages_with_context(critique_prompt, history, uploaded_files)
     
-    history.append((None, generate_styled_block("...", "Critique", critique_model)))
-    yield history_to_html(history)
+    # Add a dummy user message for display purposes, then the bot response
+    history.append({"role": "user", "content": "Critique Request"})
+    history.append({"role": "assistant", "content": format_bot_message("...", "Critique", critique_model)})
+    yield history
 
     critique_response = ""
     for chunk in stream_model(critique_messages, critique_model):
         critique_response += chunk
-        history[-1] = (None, generate_styled_block(critique_response, "Critique", critique_model))
-        yield history_to_html(history)
+        history[-1]["content"] = format_bot_message(critique_response, "Critique", critique_model)
+        yield history
 
     # 2. Generate Revised Response
-    review_prompt = f"Based on the entire conversation history and the following critique, please provide a revised, improved version of your last response. Synthesize the critique into your reasoning and address any shortcomings identified.\n\n--- CRITIQUE ---\n{critique_response}\n--- END CRITIQUE ---"
+    review_prompt = f"{review_prompt_template}\n\n--- CRITIQUE ---\n{critique_response}\n--- END CRITIQUE ---"
     review_messages = build_messages_with_context(review_prompt, history, uploaded_files)
 
-    history.append((None, generate_styled_block("...", "Revision", primary_model)))
-    yield history_to_html(history)
+    # Add another dummy user message for the revision
+    history.append({"role": "user", "content": "Review Request"})
+    history.append({"role": "assistant", "content": format_bot_message("...", "Revision", primary_model)})
+    yield history
 
     revised_response = ""
     for chunk in stream_model(review_messages, primary_model):
         revised_response += chunk
-        history[-1] = (None, generate_styled_block(revised_response, "Revision", primary_model))
-        yield history_to_html(history)
+        history[-1]["content"] = format_bot_message(revised_response, "Revision", primary_model)
+        yield history
 
 
-with gr.Blocks(title="Discursus", theme=gr.themes.Default(), css="#conversation-container { height: 600px; overflow-y: auto; }") as demo:
+with gr.Blocks(title="Discursus", theme=gr.themes.Default()) as demo:
     gr.Markdown("# Discursus: A System for Critical LLM Discourse")
-    
     with gr.Row():
         primary_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Claude 4.5 Sonnet", label="Primary Model")
         critique_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Gemini 2.5 Pro", label="Critique Model")
 
-    with gr.Column(elem_id="conversation-container"):
-        conversation_display = gr.Markdown()
-    
+    chatbot = gr.Chatbot(label="Conversation", height=600, type="messages")
+
     with gr.Row():
         with gr.Column(scale=10):
             user_input = gr.Textbox(show_label=False, placeholder="Enter your message or use the suggested question...", lines=3, value=SUGGESTED_QUESTION)
         with gr.Column(scale=1, min_width=80):
             send_btn = gr.Button("Send", variant="primary")
 
-    with gr.Row():
-        critique_btn = gr.Button("🔍 Initiate Critique & Review")
-        upload_btn = gr.UploadButton("📎 Upload Files", file_count="multiple", file_types=["text", ".md", ".py", ".csv", ".json"])
-        reset_btn = gr.Button("🔄 New Conversation")
+    with gr.Accordion("Advanced Options", open=False):
+        with gr.Row():
+            critique_btn = gr.Button("Critique & Review")
+            reset_btn = gr.Button("🔄 New Conversation")
+            upload_btn = gr.UploadButton("📎 Upload Files", file_count="multiple", file_types=["text", ".md", ".py", ".csv", ".json"])
+        
+        critique_prompt_textbox = gr.Textbox(
+            label="Critique Prompt",
+            lines=3,
+            value=(
+                "Please provide a concise, constructive critique of the assistant's reasoning, accuracy, and helpfulness throughout the preceding conversation. "
+                "Identify any potential biases, logical fallacies, or missed opportunities for a more comprehensive response. "
+                "Be extremely critical of citations and confirm or refute each specific citation, as existing or hallucinated, and then as relevant or not. "
+                "Provide a clear assessment of each and every citation and mark each with a Status (green existing/red hallucinated) and a Relevance (red 'X', or an orange, or yellow or green). "
+                "On this basis, and the overall assessment of the response, provide an overall critique rating out of 10 for the response."
+            )
+        )
+        review_prompt_textbox = gr.Textbox(
+            label="Review Prompt Template",
+            lines=3,
+            value="Based on the entire conversation history and the following critique, please provide a revised, improved version of your last response. " \
+            "Synthesize the critique into your reasoning and address any shortcomings identified."
+        )
 
-    history_state = gr.State([])
+
     file_state = gr.State([])
 
     def handle_send(user_question, history, p_model, files):
         if not user_question.strip():
-            return history_to_html(history), gr.update(value="")
-        for html_output, user_input_update in chat_turn(user_question, history, p_model, files):
-            yield html_output, user_input_update
+            return history, gr.update(value="")
+        yield from chat_turn(user_question, history, p_model, files)
 
-    def handle_critique(history, p_model, c_model, files):
-        for html_output in critique_and_review_workflow(history, p_model, c_model, files):
-            yield html_output
+    def handle_critique(history, p_model, c_model, files, critique_prompt, review_template):
+        yield from critique_and_review_workflow(history, p_model, c_model, files, critique_prompt, review_template)
 
     def handle_upload(files):
         file_names = [os.path.basename(f.name) for f in files]
         upload_status = f"📎 Uploaded: {', '.join(file_names)}"
         return files, gr.update(value=upload_status)
 
-    autoscroll_js = """
-    () => {
-        const container = document.querySelector('#conversation-container');
-        if (container) {
-            const observer = new MutationObserver(() => {
-                container.scrollTop = container.scrollHeight;
-            });
-            observer.observe(container, { childList: true, subtree: true });
-        }
-    }
-    """
-
     send_btn.click(
         handle_send,
-        [user_input, history_state, primary_model, file_state],
-        [conversation_display, user_input]
+        [user_input, chatbot, primary_model, file_state],
+        [chatbot, user_input]
     )
 
     user_input.submit(
         handle_send,
-        [user_input, history_state, primary_model, file_state],
-        [conversation_display, user_input]
+        [user_input, chatbot, primary_model, file_state],
+        [chatbot, user_input]
     )
-    
+
     critique_btn.click(
         handle_critique,
-        [history_state, primary_model, critique_model, file_state],
-        [conversation_display]
+        [chatbot, primary_model, critique_model, file_state, critique_prompt_textbox, review_prompt_textbox],
+        [chatbot]
     )
 
     upload_btn.upload(
@@ -298,12 +273,10 @@ with gr.Blocks(title="Discursus", theme=gr.themes.Default(), css="#conversation-
     )
 
     reset_btn.click(
-        lambda: ([], [], "", gr.update(placeholder="Enter your message or use the suggested question...", value="")),
+        lambda: ([], [], gr.update(placeholder="Enter your message or use the suggested question...", value="")),
         [],
-        [history_state, file_state, conversation_display, user_input]
+        [chatbot, file_state, user_input]
     )
 
-    demo.load(None, None, None, js=autoscroll_js)
-
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", server_port=int(os.getenv("PORT", 7860)), share=False)
+    demo.launch(server_name="0.0.0.0", share=False)
