@@ -195,6 +195,7 @@ def critique_and_review_workflow(history: List[dict], primary_model: str, critiq
 
 
 with gr.Blocks(title="Discursus", theme=gr.themes.Default()) as demo:
+    gr.Image("logo.png", height=100, interactive=False, container=False)
     gr.Markdown("# Discursus: A System for Critical LLM Discourse")
     with gr.Row():
         primary_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Claude 4.5 Sonnet", label="Primary Model")
