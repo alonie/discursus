@@ -1,0 +1,46 @@
+{
+  "policy_domain_high_complexity": {
+    "name": "policy_domain_high_complexity",
+    "title": "Pandemic Lockdown Trade-off Decision",
+    "domain": "policy",
+    "complexity": "high",
+    "prompt": "A mid-sized country faces a resurgence of a novel respiratory virus. Vaccination rates have plateaued between 45-65%, ICU capacity varies between 75-95% across regions, and economic recovery remains fragile. Recent epidemiological studies suggest transmission rates may be 30-60% higher than initial models predicted. The government is considering reintroducing strict lockdowns for 4-8 weeks to suppress transmission before winter. Should it do so? Justify your position with evidence-backed analysis of epidemiological risk, economic stability, civil liberties, and public trust. Provide specific citations for key empirical claims and measurable predictions your approach would generate.",
+    "metadata": {
+      "anchors": "partial_objective",
+      "tags": ["decision-critical", "multi-domain", "high_disagreement"]
+    }
+  },
+  "legal_domain_high_complexity": {
+    "name": "legal_domain_high_complexity",
+    "title": "Constitutional Surveillance Law Challenge",
+    "domain": "legal",
+    "complexity": "high",
+    "prompt": "A constitutional court is reviewing a new surveillance law permitting bulk collection of citizens’ digital communications metadata without individual warrants, justified by counterterrorism needs. Civil liberties advocates argue the law violates constitutional privacy protections and lacks sufficient oversight. The government contends that bulk data is essential for pre-empting imminent threats and cites declining trust in existing warrant systems. Should the court uphold or strike down the law? Provide an explicit weighting of constitutional principles, security imperatives, precedent stability, and public trust. Support your reasoning with citations to legal frameworks or analogous precedents, specify measurable legal or social outcomes within five years, and analyze which constitutional balancing test (strict scrutiny, intermediate scrutiny, rational basis) applies.",
+    "metadata": {
+      "anchors": "limited_objective",
+      "tags": ["decision-critical", "interpretive_disagreement", "process_transparency"]
+    }
+  },
+  "medical_domain_medium_high_complexity": {
+    "name": "medical_domain_medium_high_complexity",
+    "title": "Compassionate Use of Unproven Immunotherapy",
+    "domain": "medical",
+    "complexity": "medium-high",
+    "prompt": "A novel immunotherapy shows early promise for a rare autoimmune condition but lacks Phase III trials. A critically ill patient, unresponsive to standard therapies, requests the therapy. The hospital ethics board must decide whether to approve its compassionate use. Consider clinical risk, informed consent, potential precedent effects, and resource allocation. Provide evidence-backed reasoning (guidelines, studies, or analogous cases) and specify how you would monitor outcomes and adjust policy if adverse events occur. Compare analogous compassionate-use cases and institutional policies across hospital systems.",
+    "metadata": {
+      "anchors": "moderate",
+      "tags": ["decision-critical", "clinical_ethics", "moderate_disagreement"]
+    }
+  },
+  "infrastructure_domain_medium_complexity": {
+    "name": "infrastructure_domain_medium_complexity",
+    "title": "Subway Ventilation Upgrade Dilemma",
+    "domain": "public_health_infrastructure",
+    "complexity": "medium",
+    "prompt": "A metropolitan transit authority must decide whether to implement a costly overhaul of its subway ventilation system after several reports of airborne disease transmission clusters. Current data suggest a 5–20% chance that poor ventilation contributed to outbreaks, but the cost of the upgrade is $1.2–2.0 billion. Alternatives include enhanced cleaning protocols and targeted ventilation upgrades at high-traffic stations. Evaluate the options, explicitly balancing public health benefit, economic cost, system reliability, and public confidence. Provide approximate percentages or confidence intervals for infection risk reduction under each option, and include at least one qualitative consideration (e.g., public trust or political feasibility) in your final recommendation.",
+    "metadata": {
+      "anchors": "partial",
+      "tags": ["moderate_stakes", "mixed_quant_qual_reasoning", "diverse_domain"]
+    }
+  }
+}
