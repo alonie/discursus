@@ -190,7 +190,7 @@ def stream_model(messages: List[dict], model_name: str, use_openrouter: bool) ->
             model=model_info["id"], 
             messages=messages, 
             stream=True, 
-            max_tokens=4096
+            max_tokens=8192
         )
         for chunk in stream:
             if chunk.choices[0].delta.content:
@@ -201,7 +201,7 @@ def stream_model(messages: List[dict], model_name: str, use_openrouter: bool) ->
 
         if provider == "openai":
             client = get_openai_client()
-            stream = client.chat.completions.create(model=native_id, messages=messages, stream=True, max_tokens=4096)
+            stream = client.chat.completions.create(model=native_id, messages=messages, stream=True, max_tokens=8192)
             for chunk in stream:
                 if chunk.choices[0].delta.content:
                     yield chunk.choices[0].delta.content
@@ -214,7 +214,7 @@ def stream_model(messages: List[dict], model_name: str, use_openrouter: bool) ->
                 system_prompt = messages[0]['content']
                 messages = messages[1:]
 
-            with client.messages.stream(model=native_id, system=system_prompt, messages=messages, max_tokens=4096) as stream:
+            with client.messages.stream(model=native_id, system=system_prompt, messages=messages, max_tokens=8192) as stream:
                 for text in stream.text_stream:
                     yield text
 
