@@ -1,0 +1,7 @@
+# nixpacks.toml
+
+[phases.setup]
+aptPkgs = ["git-lfs"]
+
+[start]
+cmd = "python app.py"

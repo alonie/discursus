@@ -477,13 +477,8 @@ with gr.Blocks(
     )
 
 if __name__ == "__main__":
-    # Get the absolute path to the directory containing this script.
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    
-    # Allow Gradio to serve files from that specific directory.
     demo.launch(
         server_name="0.0.0.0", 
         server_port=int(os.getenv("PORT", 7860)), 
-        share=False,
-        allowed_paths=[script_dir]
+        share=False
     )
