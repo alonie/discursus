@@ -175,32 +175,35 @@ def chat_turn(user_question: str, history: List[dict], primary_model: str, uploa
         history[-1]["content"] = format_bot_message(full_response, "Response", primary_model)
         yield history, gr.update(value=""), f"Token Count: {count_tokens(history)}"
 
-def critique_and_review_workflow(history: List[dict], primary_model: str, critique_model: str, uploaded_files, critique_prompt: str, review_prompt_template: str) -> Generator:
-    """The full C&R workflow, displaying all output in the main display."""
+def handle_critique(history: List[dict], critique_model: str, uploaded_files, critique_prompt: str) -> Generator:
+    """Generates a critique of the conversation."""
     if not history:
         history.append({"role": "assistant", "content": format_bot_message("Cannot perform critique on an empty conversation.", "Critique", "System")})
-        yield history, f"Token Count: {count_tokens(history)}"
+        yield history, f"Token Count: {count_tokens(history)}", ""
         return
 
-    # 1. Generate Critique
     critique_messages = build_messages_with_context(critique_prompt, history, uploaded_files)
     
-    # Add a dummy user message for display purposes, then the bot response
     history.append({"role": "user", "content": "Critique Request"})
     history.append({"role": "assistant", "content": format_bot_message("...", "Critique", critique_model)})
-    yield history, f"Token Count: {count_tokens(history)}"
+    yield history, f"Token Count: {count_tokens(history)}", ""
 
     critique_response = ""
     for chunk in stream_model(critique_messages, critique_model):
         critique_response += chunk
         history[-1]["content"] = format_bot_message(critique_response, "Critique", critique_model)
-        yield history, f"Token Count: {count_tokens(history)}"
+        yield history, f"Token Count: {count_tokens(history)}", critique_response
 
-    # 2. Generate Revised Response
-    review_prompt = f"{review_prompt_template}\n\n--- CRITIQUE ---\n{critique_response}\n--- END CRITIQUE ---"
+def handle_review(history: List[dict], primary_model: str, uploaded_files, review_prompt_template: str, last_critique: str) -> Generator:
+    """Generates a revised response based on the last critique."""
+    if not last_critique:
+        history.append({"role": "assistant", "content": format_bot_message("A critique must be generated before a revision can be made.", "Revision", "System")})
+        yield history, f"Token Count: {count_tokens(history)}"
+        return
+
+    review_prompt = f"{review_prompt_template}\n\n--- CRITIQUE ---\n{last_critique}\n--- END CRITIQUE ---"
     review_messages = build_messages_with_context(review_prompt, history, uploaded_files)
 
-    # Add another dummy user message for the revision
     history.append({"role": "user", "content": "Review Request"})
     history.append({"role": "assistant", "content": format_bot_message("...", "Revision", primary_model)})
     yield history, f"Token Count: {count_tokens(history)}"
@@ -244,45 +247,45 @@ with gr.Blocks(
     gr.Markdown("### Critique & Review Workflow")
     
     with gr.Row():
-        critique_btn = gr.Button("Critique & Review", variant="secondary")
-
-    with gr.Row():
-        critique_prompt_textbox = gr.Textbox(
-            label="Critique Prompt",
-            lines=5,
-            value=(
-                "Please provide a concise, constructive critique of the assistant's reasoning, accuracy, and helpfulness throughout the preceding conversation. "
-                "Identify any potential biases, logical fallacies, or missed opportunities for a more comprehensive response. "
-                "Be extremely critical of citations and confirm or refute each specific citation, as existing or hallucinated, and then as relevant or not. "
-                "Provide a clear assessment of each and every citation and mark each with a Status icon (green existing/red hallucinated) + explanation "
-                "and a Relevance icon (red 'X', or an orange, or yellow or green) + explanation. "
-                "On this basis, and the overall assessment of the response, provide an overall critique rating out of 10 for the response."
+        with gr.Column():
+            critique_btn = gr.Button("Generate Critique", variant="secondary")
+            critique_prompt_textbox = gr.Textbox(
+                label="Critique Prompt",
+                lines=5,
+                value=(
+                    "Please provide a concise, constructive critique of the assistant's reasoning, accuracy, and helpfulness throughout the preceding conversation. "
+                    "Identify any potential biases, logical fallacies, or missed opportunities for a more comprehensive response. "
+                    "Be extremely critical of citations and confirm or refute each specific citation, as existing or hallucinated, and then as relevant or not. "
+                    "Provide a clear assessment of each and every citation and mark each with a Status icon (green existing/red hallucinated) + explanation "
+                    "and a Relevance icon (red 'X', or an orange, or yellow or green) + explanation. "
+                    "On this basis, and the overall assessment of the response, provide an overall critique rating out of 10 for the response."
+                )
             )
-        )
-        review_prompt_textbox = gr.Textbox(
-            label="Review Prompt Template",
-            lines=5,
-            value="Based on the entire conversation history and the following critique, please provide a revised, improved version of your last response. " \
-            "Synthesize the critique into your reasoning and address any shortcomings identified."
-        )
+        with gr.Column():
+            review_btn = gr.Button("Generate Revision", variant="secondary")
+            review_prompt_textbox = gr.Textbox(
+                label="Review Prompt Template",
+                lines=5,
+                value="Based on the entire conversation history and the following critique, please provide a revised, improved version of your last response. " \
+                "Synthesize the critique into your reasoning and address any shortcomings identified."
+            )
 
     reset_btn = gr.Button("🔄 New Conversation")
 
 
     file_state = gr.State([])
+    last_critique_state = gr.State("")
 
     def handle_send(user_question, history, p_model, files):
         if not user_question.strip():
             return history, gr.update(value=""), f"Token Count: {count_tokens(history)}"
         yield from chat_turn(user_question, history, p_model, files)
 
-    def handle_critique(history, p_model, c_model, files, critique_prompt, review_template):
-        yield from critique_and_review_workflow(history, p_model, c_model, files, critique_prompt, review_template)
-
     def handle_upload(files):
+        """Handles the file upload event and updates the UI."""
         file_names = [os.path.basename(f.name) for f in files]
-        upload_status = f"📎 Uploaded: {', '.join(file_names)}"
-        return files, gr.update(value=upload_status)
+        upload_status = f"📎 Uploaded: {', '.join(file_names)}. You can now ask questions about them."
+        return files, upload_status
 
     def handle_summarize(history: List[dict]) -> Generator:
         """Summarizes the conversation history to reduce token count."""
@@ -299,11 +302,10 @@ with gr.Blocks(
         conversation_text = "\n".join([f"{msg['role']}: {msg['content']}" for msg in to_summarize])
         summary_prompt = f"Please provide a concise summary of the following conversation:\n\n{conversation_text}"
         
-        # Use a fast model for summarization
         summary_messages = [{"role": "user", "content": summary_prompt}]
         
         summary_response = ""
-        # Use a fast model like GPT-4o Mini or Gemini Flash for summarization
+        # Use a fast model like GPT-4o Mini for summarization
         summarization_model = "GPT-4o Mini" 
         yield history, "Summarizing..." # Update UI to show activity
         
@@ -320,7 +322,6 @@ with gr.Blocks(
         
         yield new_history, f"Token Count: {count_tokens(new_history)}"
 
-
     send_btn.click(
         handle_send,
         [user_input, chatbot, primary_model, file_state],
@@ -335,7 +336,13 @@ with gr.Blocks(
 
     critique_btn.click(
         handle_critique,
-        [chatbot, primary_model, critique_model, file_state, critique_prompt_textbox, review_prompt_textbox],
+        [chatbot, critique_model, file_state, critique_prompt_textbox],
+        [chatbot, token_count_display, last_critique_state]
+    )
+
+    review_btn.click(
+        handle_review,
+        [chatbot, primary_model, file_state, review_prompt_textbox, last_critique_state],
         [chatbot, token_count_display]
     )
 
