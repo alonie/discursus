@@ -130,12 +130,12 @@ def stream_model(messages: List[dict], model_name: str) -> Generator[str, None, 
 
     if provider == "anthropic":
         client = get_anthropic_client()
-        with client.messages.stream(model=model_id, max_tokens=2000, messages=messages) as stream:
+        with client.messages.stream(model=model_id, max_tokens=4096, messages=messages) as stream:
             yield from _stream_logic(stream.text_stream)
     
     elif provider == "openai":
         client = get_openai_client()
-        stream = client.chat.completions.create(model=model_id, messages=messages, stream=True)
+        stream = client.chat.completions.create(model=model_id, messages=messages, stream=True, max_tokens=4096)
         def openai_streamer():
             for chunk in stream:
                 if chunk.choices[0].delta.content:
@@ -224,11 +224,10 @@ with gr.Blocks(
             gr.Markdown("# Discursus: A System for Critical LLM Discourse")
 
     with gr.Row():
-        primary_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Claude 4.5 Sonnet", label="Primary Model")
-        critique_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Gemini 2.5 Pro", label="Critique Model")
-        with gr.Column(min_width=200):
-            summarize_btn = gr.Button("Summarise Context")
-            token_count_display = gr.Textbox(label="Token Count", value="Token Count: 0", interactive=False)
+        primary_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Claude 4.5 Sonnet", label="Primary Model", scale=4)
+        critique_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Gemini 2.5 Pro", label="Critique Model", scale=4)
+        token_count_display = gr.Textbox(label="Token Count", value="Token Count: 0", interactive=False, scale=1)
+        summarize_btn = gr.Button("Summarise Context", scale=1)
 
     chatbot = gr.Chatbot(label="Conversation", height=600, type="messages")
 
