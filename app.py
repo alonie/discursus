@@ -238,10 +238,17 @@ def stream_model(messages: List[dict], model_name: str, use_openrouter: bool) ->
 def chat_turn(user_question: str, history: List[dict], primary_model: str, uploaded_files, use_openrouter: bool) -> Generator:
     """A single turn in the primary chat conversation."""
     history.append({"role": "user", "content": user_question})
-    history.append({"role": "assistant", "content": ""})
+    history.append({"role": "assistant", "content": format_bot_message("...", "Response", primary_model)})
     
     tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
     yield history, gr.update(value=""), f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}"
+
+    # Provide immediate feedback for non-streaming models
+    model_info = MODEL_MAP[primary_model]
+    if not model_info.get("supports_streaming", True):
+        wait_message = f"Generating response with {primary_model} (non-streaming). This may take a moment..."
+        history[-1]["content"] = format_bot_message(wait_message, "Response", primary_model)
+        yield history, gr.update(value=""), f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}"
 
     messages = build_messages_with_context(user_question, history[:-2], uploaded_files)
     
@@ -269,6 +276,13 @@ def handle_critique(history: List[dict], critique_model: str, uploaded_files, cr
     tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
     yield history, f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}", ""
 
+    # Provide immediate feedback for non-streaming models
+    model_info = MODEL_MAP[critique_model]
+    if not model_info.get("supports_streaming", True):
+        wait_message = f"Generating critique with {critique_model} (non-streaming). This may take a moment..."
+        history[-1]["content"] = format_bot_message(wait_message, "Critique", critique_model)
+        yield history, f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}", ""
+
     critique_response = ""
     for chunk in stream_model(critique_messages, critique_model, use_openrouter):
         critique_response += chunk
@@ -291,6 +305,13 @@ def handle_review(history: List[dict], primary_model: str, uploaded_files, revie
     history.append({"role": "assistant", "content": format_bot_message("...", "Revision", primary_model)})
     tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
     yield history, f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}"
+
+    # Provide immediate feedback for non-streaming models
+    model_info = MODEL_MAP[primary_model]
+    if not model_info.get("supports_streaming", True):
+        wait_message = f"Generating revision with {primary_model} (non-streaming). This may take a moment..."
+        history[-1]["content"] = format_bot_message(wait_message, "Revision", primary_model)
+        yield history, f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}"
 
     revised_response = ""
     for chunk in stream_model(review_messages, primary_model, use_openrouter):
