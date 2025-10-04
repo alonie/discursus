@@ -1,8 +1,0 @@
-# nixpacks.toml
-
-[phases.setup]
-aptPkgs = ["git-lfs"]
-cmds = ["git lfs pull"]
-
-[start]
-cmd = "python app.py"
