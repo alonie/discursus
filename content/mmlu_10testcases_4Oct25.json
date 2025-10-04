@@ -1,0 +1,134 @@
+{
+  "test_cases": [
+    {
+      "id": "mmlu_case_0",
+      "domain": "math",
+      "complexity": "mmlu_complexity",
+      "title": "Ring Characteristic Problem",
+      "prompt": "The symmetric group $S_n$ has $n!$ elements, hence it is not true that $S_{10}$ has 10 elements.\n\nFind the characteristic of the ring 2Z.\n\nOptions:\nA) 0\nB) 30\nC) 3\nD) 10\nE) 12\nF) 50\nG) 2\nH) 100\nI) 20\nJ) 5",
+      "metadata": {
+        "correct_answer": "A",
+        "source": "MMLU",
+        "category": "math",
+        "reasoning_hint": "Consider when ka = 0 for all a in 2Z"
+      }
+    },
+    {
+      "id": "mmlu_case_4",
+      "domain": "math",
+      "complexity": "mmlu_complexity",
+      "title": "Basketball Team Division Problem",
+      "prompt": "A total of 30 players will play basketball at a park. There will be exactly 5 players on each team. Which statement correctly explains how to find the number of teams needed?\n\nOptions:\nA) Multiply 5 by 5 to find 25 teams\nB) Divide 30 by 5 to find 6 teams\nC) Add 5 to 30 to find 35 teams\nD) Subtract 30 from 5 to find -25 teams\nE) Divide 5 by 30 to find 0.1667 teams\nF) Add 5 to 30 then divide by 2 to find 17.5 teams",
+      "metadata": {
+        "correct_answer": "B",
+        "source": "MMLU",
+        "category": "math",
+        "reasoning_hint": "Players divided by players per team"
+      }
+    },
+    {
+      "id": "mmlu_case_10",
+      "domain": "physics",
+      "complexity": "mmlu_complexity",
+      "title": "Telescope Light Gathering Capacity",
+      "prompt": "Say the pupil of your eye has a diameter of 5 mm and you have a telescope with an aperture of 50 cm. How much more light can the telescope gather than your eye?\n\nOptions:\nA) 1000 times more\nB) 50 times more\nC) 5000 times more\nD) 500 times more\nE) 10000 times more\nF) 20000 times more\nG) 2000 times more\nH) 100 times more\nI) 10 times more",
+      "metadata": {
+        "correct_answer": "E",
+        "source": "MMLU",
+        "category": "physics",
+        "reasoning_hint": "Light is proportional to aperture area (πD²/4)"
+      }
+    },
+    {
+      "id": "mmlu_case_12",
+      "domain": "physics",
+      "complexity": "mmlu_complexity",
+      "title": "Refracting Telescope Angular Magnification",
+      "prompt": "A refracting telescope consists of two converging lenses separated by 100 cm. The eye-piece lens has a focal length of 20 cm. The angular magnification of the telescope is:\n\nOptions:\nA) 10\nB) 40\nC) 6\nD) 25\nE) 15\nF) 50\nG) 30\nH) 4\nI) 5\nJ) 20",
+      "metadata": {
+        "correct_answer": "H",
+        "source": "MMLU",
+        "category": "physics",
+        "reasoning_hint": "Focal lengths must add to separation; magnification is their ratio"
+      }
+    },
+    {
+      "id": "mmlu_case_18",
+      "domain": "business",
+      "complexity": "mmlu_complexity",
+      "title": "Direct Marketing Media Format",
+      "prompt": "Although the content and quality can be as controlled as direct mail, response rates of this medium are lower because of the lack of a personal address mechanism. This media format is known as:\n\nOptions:\nA) Online banners\nB) Television advertising\nC) Email marketing\nD) Care lines\nE) Direct mail\nF) Inserts\nG) Door to door\nH) Radio advertising\nI) Billboards\nJ) Social media advertising",
+      "metadata": {
+        "correct_answer": "G",
+        "source": "MMLU",
+        "category": "business",
+        "reasoning_hint": "Non-addressed delivery within geographic area"
+      }
+    },
+    {
+      "id": "mmlu_case_22",
+      "domain": "biology",
+      "complexity": "mmlu_complexity",
+      "title": "Enzyme Mutation Effect on Substrate Specificity",
+      "prompt": "A mutation in a bacterial enzyme changed a previously polar amino acid into a nonpolar amino acid. This amino acid was located at a site distant from the enzyme's active site. How might this mutation alter the enzyme's substrate specificity?\n\nOptions:\nA) By changing the enzyme's pH optimum\nB) By changing the enzyme's molecular weight\nC) An amino acid change away from the active site increases the enzyme's substrate specificity\nD) By changing the shape of the protein\nE) By changing the enzyme's temperature optimum\nF) By altering the enzyme's ability to be denatured\nG) By changing the enzyme's location in the cell\nH) By changing the enzyme's color\nI) An amino acid change away from the active site cannot alter the enzyme's substrate specificity\nJ) By altering the enzyme's rate of reaction",
+      "metadata": {
+        "correct_answer": "D",
+        "source": "MMLU",
+        "category": "biology",
+        "reasoning_hint": "Primary structure change affects tertiary structure and protein shape"
+      }
+    },
+    {
+      "id": "mmlu_case_33",
+      "domain": "computer_science",
+      "complexity": "mmlu_complexity",
+      "title": "Ransomware Trojan Identification",
+      "prompt": "_____________ can modify data on your system – so that your system doesn't run correctly or you can no longer access specific data, or it may even ask for ransom in order to give your access.\n\nOptions:\nA) Email Trojans\nB) Backdoor Trojans\nC) Rootkit Trojans\nD) Banking Trojans\nE) Trojan-Downloader\nF) Spyware Trojans\nG) Network Trojans\nH) Worm Trojans\nI) Ransom Trojan\nJ) IM – Trojans",
+      "metadata": {
+        "correct_answer": "I",
+        "source": "MMLU",
+        "category": "computer_science",
+        "reasoning_hint": "Trojan type that demands ransom for data access"
+      }
+    },
+    {
+      "id": "mmlu_case_45",
+      "domain": "philosophy",
+      "complexity": "mmlu_complexity",
+      "title": "Propositional Logic Symbolization",
+      "prompt": "Which of the given formulas of PL is the best symbolization of the following sentence?\n\nTurtles live long lives and are happy creatures, unless they are injured.\n\nOptions:\nA) (L • H) ≡ I\nB) (L • H) ∨ I\nC) L • (H ∨ I)\nD) L • (H ⊃ R)",
+      "metadata": {
+        "correct_answer": "B",
+        "source": "MMLU",
+        "category": "philosophy",
+        "reasoning_hint": "L=living long, H=being happy, I=being injured. 'Unless' = OR"
+      }
+    },
+    {
+      "id": "mmlu_case_49",
+      "domain": "philosophy",
+      "complexity": "mmlu_complexity",
+      "title": "Jewish Covenant Sign",
+      "prompt": "What is the sign of the covenant for Jewish males?\n\nOptions:\nA) Fasting on Yom Kippur\nB) Lighting Shabbat candles\nC) The rainbow\nD) Circumcision\nE) The Torah\nF) Bar mitzvah\nG) Keeping kosher\nH) Wearing a kippah\nI) A son\nJ) The Star of David",
+      "metadata": {
+        "correct_answer": "D",
+        "source": "MMLU",
+        "category": "philosophy",
+        "reasoning_hint": "Brit milah is the most distinctive covenant sign"
+      }
+    },
+    {
+      "id": "mmlu_case_54",
+      "domain": "other",
+      "complexity": "mmlu_complexity",
+      "title": "Cheap Trick Live Album Location",
+      "prompt": "What place is named in the title of the 1979 live album by rock legends Cheap Trick?\n\nOptions:\nA) Brooklyn\nB) Beijing\nC) Budapest\nD) Boston\nE) Bhutan\nF) Barcelona\nG) Britain\nH) Brisbane\nI) Bruges\nJ) Budokan",
+      "metadata": {
+        "correct_answer": "J",
+        "source": "MMLU",
+        "category": "other",
+        "reasoning_hint": "Famous indoor arena in Tokyo, Japan"
+      }
+    }
+  ]
+}

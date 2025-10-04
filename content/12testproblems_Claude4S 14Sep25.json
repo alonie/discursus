@@ -1,0 +1,976 @@
+{
+  "deliberative_ai_test_cases": {
+    "medical_domain": {
+      "low_complexity": {
+        "title": "Uncomplicated Urinary Tract Infection Management",
+        "description": "23-year-old female college student with classic uncomplicated cystitis presentation",
+        "complexity_rationale": "Clear diagnostic criteria, established treatment guidelines, minimal legitimate expert disagreement",
+        "patient_profile": {
+          "age": 23,
+          "gender": "female",
+          "occupation": "college student",
+          "chief_complaint": "burning when I urinate and need to go to the bathroom all the time"
+        },
+        "clinical_presentation": {
+          "history": {
+            "dysuria_duration": "2 days",
+            "frequency_urgency": true,
+            "suprapubic_discomfort": "mild",
+            "fever": false,
+            "flank_pain": false,
+            "vaginal_discharge": false,
+            "sexual_activity": "active with barrier contraception",
+            "previous_utis": false
+          },
+          "vital_signs": {
+            "bp": "110/70",
+            "hr": 72,
+            "temperature": "98.4Â°F",
+            "rr": 16
+          },
+          "physical_exam": {
+            "appearance": "well, no distress",
+            "abdomen": "soft, mild suprapubic tenderness",
+            "cva_tenderness": false
+          }
+        },
+        "diagnostics": {
+          "urinalysis": {
+            "nitrites": "positive",
+            "leukocyte_esterase": "positive (2+)",
+            "wbc": ">50/hpf",
+            "rbc": "5-10/hpf",
+            "bacteria": "many"
+          },
+          "pregnancy_test": "negative"
+        },
+        "standard_treatment": {
+          "first_line": "Nitrofurantoin 100mg BID x 5 days OR TMP-SMX DS BID x 3 days",
+          "patient_education": "Complete full course, increase fluids, void after intercourse",
+          "follow_up": "Return if symptoms persist after 48-72 hours",
+          "expected_outcome": ">95% cure rate"
+        },
+        "areas_of_minimal_disagreement": [
+          "Choice between nitrofurantoin vs. TMP-SMX",
+          "3-day vs. 5-day treatment duration",
+          "Need for follow-up urine culture"
+        ]
+      },
+      "medium_complexity": {
+        "title": "Atypical Chest Pain Risk Stratification and Disposition Decision",
+        "description": "52-year-old female with atypical chest pain requiring disposition decision",
+        "complexity_rationale": "Intermediate risk profile with multiple valid disposition approaches based on different risk tolerance frameworks",
+        "patient_profile": {
+          "age": 52,
+          "gender": "female",
+          "occupation": "accountant",
+          "presentation_time": "2:30 AM ED visit"
+        },
+        "clinical_presentation": {
+          "chief_complaint": "chest discomfort on and off for about 6 hours",
+          "history": {
+            "onset": "8 PM during dinner",
+            "character": "heavy pressure, left of center",
+            "radiation": "occasionally to left jaw",
+            "duration": "episodes lasting 5-15 minutes",
+            "exertional_relationship": "occurred at rest",
+            "relief_factors": "partially relieved by antacids",
+            "associated_symptoms": {
+              "nausea": false,
+              "diaphoresis": false,
+              "shortness_of_breath": "mild with walking"
+            }
+          },
+          "past_medical_history": {
+            "hypertension": "well-controlled on lisinopril 10mg",
+            "hyperlipidemia": "atorvastatin 20mg x 3 years",
+            "hypothyroidism": "levothyroxine 75mcg",
+            "family_history": "mother MI at 68, father stroke at 74",
+            "smoking": "never smoker",
+            "lifestyle": "sedentary, recent weight gain, BMI 29"
+          },
+          "vital_signs": {
+            "bp": "156/94",
+            "hr": 78,
+            "rr": 16,
+            "o2_sat": "98% on room air",
+            "temperature": "afebrile"
+          },
+          "physical_exam": {
+            "appearance": "mildly anxious but comfortable at rest",
+            "cardiovascular": "RRR, no murmurs/rubs/gallops, no JVD",
+            "pulmonary": "clear bilaterally",
+            "extremities": "no edema, 2+ pulses"
+          }
+        },
+        "diagnostics": {
+          "ecg": {
+            "rhythm": "sinus rhythm, rate 76",
+            "intervals": "normal",
+            "st_changes": "no elevation or depression",
+            "t_waves": "possible minimal flattening V4-V5"
+          },
+          "laboratory": {
+            "troponin_i": "<0.01 ng/mL (normal <0.04)",
+            "cmp": "normal except glucose 118",
+            "cbc": "normal",
+            "tsh": "2.1 mIU/L"
+          },
+          "risk_scores": {
+            "heart_score": {
+              "history": 1,
+              "ecg": 0,
+              "age": 1,
+              "risk_factors": 2,
+              "troponin": 0,
+              "total": 4,
+              "interpretation": "intermediate risk"
+            },
+            "timi_score": {
+              "total": 1,
+              "interpretation": "low-intermediate risk"
+            }
+          }
+        },
+        "disposition_options": [
+          {
+            "option": "discharge_home",
+            "supporting_evidence": "normal initial troponin, normal ECG, TIMI score 1, patient preference",
+            "risks": "missing early ACS, only single troponin measurement"
+          },
+          {
+            "option": "observation_serial_troponins",
+            "supporting_evidence": "HEART score 4 suggests 2.5% risk MACE at 6 weeks",
+            "risks": "resource utilization for likely negative workup"
+          },
+          {
+            "option": "stress_testing",
+            "supporting_evidence": "intermediate risk profile, can risk-stratify without admission",
+            "risks": "delay in diagnosis if acute process"
+          },
+          {
+            "option": "ct_coronary_angiography",
+            "supporting_evidence": "can definitively rule out CAD, available immediately",
+            "risks": "radiation exposure, cost, incidental findings"
+          },
+          {
+            "option": "admission_rule_out_mi",
+            "supporting_evidence": "conservative approach given family history",
+            "risks": "over-medicalization, resource utilization"
+          }
+        ],
+        "areas_of_expert_disagreement": [
+          "Interpretation of atypical symptoms in middle-aged women",
+          "Weight given to family history vs. current presentation",
+          "Appropriate use of HEART vs. TIMI scoring",
+          "Cost-effectiveness of different diagnostic strategies",
+          "Integration of patient preferences with medical recommendations"
+        ]
+      },
+      "high_complexity": {
+        "title": "ACS vs PE Overlap Syndrome with Competing Treatment Approaches",
+        "description": "45-year-old male with overlapping clinical features requiring competing treatment philosophies",
+        "complexity_rationale": "Genuine expert uncertainty about competing treatment approaches with high-stakes trade-offs",
+        "source": "Previously analyzed deliberative AI debate transcript",
+        "key_disagreement": "Anticoagulation Paradox - immediate ACS treatment vs. withholding pending PE exclusion",
+        "clinical_dilemma": "Overlapping biomarkers (elevated troponin, D-dimer, BNP) create legitimate uncertainty between NSTEMI and PE",
+        "competing_approaches": [
+          {
+            "approach": "treat_highest_risk_first",
+            "rationale": "Immediate ACS-standard therapy based on highest probability diagnosis",
+            "supporters": "Gemini position in debate",
+            "evidence": "TIMI scoring, troponin elevation, classic symptoms"
+          },
+          {
+            "approach": "diagnose_then_treat",
+            "rationale": "Withhold aggressive therapy until PE excluded due to bleeding risk",
+            "supporters": "GPT and Claude initial positions",
+            "evidence": "Elevated D-dimer, bleeding risk with dual antiplatelets"
+          }
+        ],
+        "emergent_behaviors_documented": [
+          "Standards escalation from uncited assertions to citation verification",
+          "Collective error detection of D-dimer misinterpretation",
+          "Novel framework development (Dual Pathway Risk Assessment)",
+          "Citation integrity verification through peer review"
+        ],
+        "final_consensus": "Treat-highest-risk-first with concurrent rapid diagnostic imaging",
+        "research_gaps_identified": [
+          "Integrated ACS/PE risk assessment tools",
+          "Optimal antithrombotic regimens under diagnostic uncertainty",
+          "Cost-effectiveness of triple rule-out CCTA"
+        ]
+      }
+    },
+    "scientific_domain": {
+      "low_complexity": {
+        "title": "Standard Statistical Analysis of Clinical Trial Data",
+        "description": "Routine RCT analysis with clean dataset and established methodology",
+        "complexity_rationale": "Standard statistical methods, clear primary endpoint, minimal analytical disagreement",
+        "study_design": {
+          "type": "double-blind, randomized, parallel-group trial",
+          "participants": 200,
+          "groups": "Drug A vs. Drug B (n=100 each)",
+          "primary_endpoint": "mean reduction in systolic BP at 12 weeks",
+          "power": "80% to detect 5 mmHg difference"
+        },
+        "data_summary": {
+          "drug_a": {
+            "baseline_sbp": "152.3 Â± 12.4 mmHg",
+            "week_12_sbp": "138.7 Â± 11.2 mmHg",
+            "mean_reduction": "13.6 Â± 8.3 mmHg",
+            "dropout_rate": "8%"
+          },
+          "drug_b": {
+            "baseline_sbp": "151.8 Â± 13.1 mmHg",
+            "week_12_sbp": "142.1 Â± 12.8 mmHg",
+            "mean_reduction": "9.7 Â± 9.1 mmHg",
+            "dropout_rate": "12%"
+          }
+        },
+        "data_quality": {
+          "missing_data": "minimal",
+          "protocol_violations": "none affecting primary analysis",
+          "distribution": "normal",
+          "variance_assumptions": "met (Levene's test p=0.24)"
+        },
+        "standard_analysis": {
+          "primary": "independent t-test",
+          "effect_size": "mean difference with 95% CI",
+          "significance_level": "Î± = 0.05, two-tailed",
+          "expected_result": "3.9 mmHg difference (95% CI: 1.2-6.6), p=0.005"
+        },
+        "minimal_disagreement_areas": [
+          "Choice of missing data imputation method",
+          "Inclusion of protocol violators",
+          "Clinical significance threshold"
+        ]
+      },
+      "medium_complexity": {
+        "title": "Polycomblike Gene Function in Drosophila Development",
+        "description": "Competing hypotheses about Pcl protein function with conflicting evidence",
+        "complexity_rationale": "Multiple valid theoretical frameworks, conflicting experimental evidence requiring interpretation",
+        "source": "Biology debate transcript from previous deliberative AI testing",
+        "central_question": "Does polycomblike (Pcl) function primarily through quantitative vs. qualitative mechanisms in gene regulation?",
+        "competing_hypotheses": [
+          {
+            "hypothesis": "quantitative_dosage_model",
+            "description": "Pcl functions through gene dosage effects with linear dose-response relationships",
+            "supporting_evidence": "Pcl mutant phenotypes show dosage sensitivity, overexpression rescues some defects",
+            "theoretical_framework": "Classical genetics dosage compensation models"
+          },
+          {
+            "hypothesis": "qualitative_switching_model", 
+            "description": "Pcl acts as molecular switch with discrete on/off states in different developmental contexts",
+            "supporting_evidence": "Context-dependent phenotypes, non-linear response to Pcl levels",
+            "theoretical_framework": "Epigenetic bistability and developmental switches"
+          }
+        ],
+        "experimental_evidence": {
+          "genetic_interactions": "Complex epistatic relationships with other PcG genes",
+          "expression_patterns": "Dynamic temporal and spatial expression during development",
+          "biochemical_data": "Protein complex formation varies by developmental stage",
+          "phenotypic_analysis": "Mutant phenotypes show both dosage-sensitive and threshold effects"
+        },
+        "conflicting_interpretations": [
+          "Whether overexpression phenotypes reflect normal function or artifacts",
+          "Significance of context-dependent vs. constitutive Pcl activities",
+          "Integration of genetic and biochemical evidence"
+        ],
+        "documented_emergent_behaviors": [
+          "Collective rejection of false claims (Groq's DNA binding assertion)",
+          "Standards escalation requiring citations and evidence",
+          "Framework synthesis combining quantitative and qualitative models"
+        ],
+        "research_gaps": [
+          "Mechanistic understanding of dosage sensitivity",
+          "Temporal dynamics of Pcl complex formation",
+          "Integration of developmental and molecular data"
+        ]
+      },
+      "high_complexity": {
+        "title": "Novel Pandemic Intervention Strategy Assessment",
+        "description": "Competing intervention strategies with limited evidence and multiple analytical frameworks",
+        "complexity_rationale": "Integration across epidemiology, economics, ethics, and policy implementation with genuine uncertainty",
+        "pathogen_characteristics": {
+          "r0_estimate": "3.5-5.2 (95% CI)",
+          "incubation_period": "3-7 days (median 4)",
+          "transmission": "pre-symptomatic confirmed, airborne",
+          "cfr_estimate": "0.8-2.1% (wide CI due to limited data)",
+          "hospitalization_rate": "5-12% of confirmed cases"
+        },
+        "population_context": {
+          "prior_immunity": "25% estimated protection from previous infections",
+          "vaccine_cross_protection": "30-50% efficacy",
+          "healthcare_capacity": "85-95% in major cities",
+          "economic_context": "fragile recovery, inflation concerns",
+          "social_factors": "compliance fatigue, educational priorities"
+        },
+        "intervention_strategies": [
+          {
+            "strategy": "comprehensive_lockdown",
+            "rationale": "precautionary principle given severity uncertainty",
+            "components": ["stay-at-home orders", "school closures", "travel restrictions"],
+            "predicted_outcomes": {
+              "transmission_reduction": "70-80%",
+              "economic_impact": "GDP reduction 8-15%",
+              "social_impact": "educational disruption, mental health effects"
+            }
+          },
+          {
+            "strategy": "targeted_protection",
+            "rationale": "focus resources on vulnerable while maintaining function",
+            "components": ["enhanced protection >65", "mask mandates", "testing protocols"],
+            "predicted_outcomes": {
+              "transmission_reduction": "40-60%",
+              "economic_impact": "GDP reduction 2-4%",
+              "social_impact": "minimal educational disruption"
+            }
+          },
+          {
+            "strategy": "adaptive_response",
+            "rationale": "scale interventions based on real-time data",
+            "components": ["trigger-based escalation", "regional variation", "flexible protocols"],
+            "predicted_outcomes": {
+              "transmission_reduction": "30-70% (variable)",
+              "economic_impact": "GDP reduction 3-8%",
+              "social_impact": "moderate disruption with adaptability"
+            }
+          },
+          {
+            "strategy": "medical_countermeasures",
+            "rationale": "focus on treatment and prevention vs. transmission control",
+            "components": ["rapid vaccine development", "therapeutic research", "voluntary measures"],
+            "predicted_outcomes": {
+              "transmission_reduction": "limited initially",
+              "economic_impact": "GDP reduction 1-3%",
+              "social_impact": "minimal restrictions, potential high morbidity"
+            }
+          }
+        ],
+        "competing_frameworks": [
+          {
+            "framework": "epidemiological_modeling",
+            "favors": "comprehensive_lockdown",
+            "rationale": "SEIR models show maximum transmission control"
+          },
+          {
+            "framework": "economic_epidemiology",
+            "favors": "targeted_protection", 
+            "rationale": "optimal welfare maximization across health and economic outcomes"
+          },
+          {
+            "framework": "public_health_ethics",
+            "tensions": "utilitarian vs. autonomy vs. equity principles",
+            "considerations": "differential impacts across populations"
+          }
+        ],
+        "evidence_gaps": [
+          "True infection fatality rate",
+          "Duration of immunity",
+          "NPI effectiveness for this variant",
+          "Long-term health consequences",
+          "Economic recovery patterns"
+        ],
+        "areas_of_expert_disagreement": [
+          "Weight given to economic vs. health outcomes",
+          "Interpretation of limited epidemiological data",
+          "Assessment of public compliance sustainability",
+          "Integration of ethical principles with practical implementation",
+          "Uncertainty quantification and decision-making frameworks"
+        ]
+      }
+    },
+    "legal_domain": {
+      "low_complexity": {
+        "title": "Standard Employment Contract NDA Violation",
+        "description": "Clear-cut breach of contract case with documented evidence",
+        "complexity_rationale": "Unambiguous contract terms, clear violation, established legal precedent",
+        "factual_background": {
+          "agreement": {
+            "type": "standard employment contract with NDA clause",
+            "confidential_info_definition": "customer lists, pricing strategies, proprietary processes",
+            "duration": "2 years post-employment",
+            "consideration": "employment and confidential access"
+          },
+          "violation": {
+            "employee_departure": "January 2024",
+            "new_employment": "direct competitor, March 2024",
+            "information_shared": [
+              "detailed customer list with contact info and purchase history",
+              "pricing strategies and discount structures",
+              "proprietary sales presentation templates"
+            ]
+          }
+        },
+        "evidence": {
+          "documentation": [
+            "original signed NDA with clear terms",
+            "email records showing information transmission",
+            "customer list comparison showing identical formatting",
+            "presentation materials with company templates"
+          ],
+          "witnesses": "former colleagues' sworn statements",
+          "admission": "new employer inadvertently confirmed receiving information"
+        },
+        "legal_framework": {
+          "jurisdiction": "California",
+          "applicable_law": "contract law, NDA enforcement precedent",
+          "enforceability": "NDA enforceable despite general non-compete restrictions",
+          "damages_methodology": "established calculation frameworks"
+        },
+        "breach_elements": {
+          "valid_contract": "signed NDA with proper consideration",
+          "performance": "company provided employment and access",
+          "breach": "employee shared prohibited information",
+          "damages": "customer list value and competitive harm quantifiable"
+        },
+        "likely_outcome": {
+          "liability": "clear liability for breach",
+          "injunctive_relief": "permanent injunction against further use",
+          "damages": "customer list value (15-20% annual revenue) plus lost profits",
+          "attorney_fees": "recoverable under contract terms"
+        },
+        "minimal_disagreement_areas": [
+          "Specific damages calculation methodology",
+          "Scope of injunctive relief duration",
+          "Punitive damages appropriateness",
+          "Attorney fees calculation"
+        ]
+      },
+      "medium_complexity": {
+        "title": "Municipal Zoning Variance for Mixed-Use Development",
+        "description": "Development proposal requiring balance of competing interests and regulatory frameworks",
+        "complexity_rationale": "Multiple stakeholder interests, competing policy objectives, discretionary decision-making",
+        "development_proposal": {
+          "project": "45-unit mixed-use building with ground-floor retail",
+          "location": "transitional zone between residential and commercial districts",
+          "current_zoning": "R-2 residential (max 25 units/acre)",
+          "requested_variance": "density increase to 35 units/acre plus commercial use",
+          "developer": "local company with good track record"
+        },
+        "supporting_factors": {
+          "municipal_planning": {
+            "comprehensive_plan": "encourages mixed-use development in transitional areas",
+            "housing_goals": "increase affordable housing stock by 15% over 5 years",
+            "economic_development": "support local business growth and job creation"
+          },
+          "project_benefits": {
+            "affordable_housing": "12 units designated affordable (26% of total)",
+            "transit_access": "located 0.3 miles from bus rapid transit",
+            "walkability": "reduces car dependency for residents",
+            "tax_revenue": "estimated $180,000 annual increase"
+          },
+          "design_features": {
+            "architecture": "compatible with neighborhood character",
+            "parking": "adequate parking provided on-site",
+            "green_building": "LEED Gold certification planned"
+          }
+        },
+        "opposing_factors": {
+          "neighbor_concerns": {
+            "traffic": "increased congestion on residential streets",
+            "parking_spillover": "concern about street parking impacts",
+            "character_change": "density incompatible with single-family area",
+            "construction_disruption": "18-month construction timeline"
+          },
+          "regulatory_standards": {
+            "precedent": "previous denials of similar density increases",
+            "infrastructure": "questions about sewer and stormwater capacity",
+            "school_capacity": "elementary school at 95% enrollment"
+          }
+        },
+        "regulatory_framework": {
+          "variance_standards": {
+            "hardship_requirement": "unnecessary hardship due to lot characteristics",
+            "public_interest": "variance must serve broader public good",
+            "neighboring_impact": "no substantial detriment to neighboring properties",
+            "comprehensive_plan": "consistency with municipal planning goals"
+          },
+          "decision_authority": "planning commission with city council appeal",
+          "public_process": "required public hearing with neighbor notification"
+        },
+        "competing_legal_arguments": [
+          {
+            "position": "grant_variance",
+            "legal_basis": "furthers comprehensive plan goals, provides public benefit",
+            "policy_arguments": [
+              "affordable housing crisis requires flexible zoning",
+              "transit-oriented development reduces environmental impact",
+              "economic benefits outweigh neighborhood concerns"
+            ]
+          },
+          {
+            "position": "deny_variance",
+            "legal_basis": "fails hardship standard, incompatible with neighborhood",
+            "policy_arguments": [
+              "precedent would undermine zoning integrity",
+              "infrastructure capacity insufficient",
+              "resident concerns about quality of life impacts"
+            ]
+          }
+        ],
+        "areas_of_legitimate_disagreement": [
+          "Interpretation of 'unnecessary hardship' standard",
+          "Weight given to comprehensive plan vs. existing zoning",
+          "Balancing affordable housing goals with neighborhood character",
+          "Assessment of infrastructure adequacy and upgrade responsibility",
+          "Precedential impact of approval on future developments",
+          "Appropriate level of deference to neighbor objections"
+        ],
+        "potential_compromise_solutions": [
+          "Reduced density (30 units/acre) with same affordable housing percentage",
+          "Phased development with infrastructure upgrades",
+          "Enhanced design standards and traffic mitigation measures",
+          "Sunset clause requiring review after 5 years"
+        ]
+      },
+      "high_complexity": {
+        "title": "Autonomous Vehicle Collision Legal Liability Framework",
+        "description": "Novel AI liability questions requiring synthesis of tort law, technology policy, and regulatory theory",
+        "complexity_rationale": "Limited precedent, multiple valid legal theories, integration of technical AI concepts with legal doctrine",
+        "incident_details": {
+          "collision": {
+            "location": "Interstate highway, California, clear weather",
+            "vehicles": "Tesla Model Y (FSD mode) vs. Honda Civic with family",
+            "outcome": "2 fatalities, 3 serious injuries",
+            "av_occupant": "minor injuries, inattentive to road"
+          },
+          "technical_findings": {
+            "av_system": "operating within specifications, latest software",
+            "sensor_performance": "all functioning normally",
+            "algorithm_decision": "misclassified stopped vehicle as moving slowly",
+            "confidence_level": "94% in driving decisions",
+            "human_operator": "texting for 15 seconds before collision, 8-second attention lapse"
+          }
+        },
+        "competing_legal_theories": [
+          {
+            "theory": "manufacturer_product_liability",
+            "variants": ["strict liability", "negligence", "failure to warn"],
+            "supporting_evidence": "misclassification of object, overconfident algorithm",
+            "challenges": "industry standard compliance, government approval"
+          },
+          {
+            "theory": "human_operator_negligence",
+            "variants": ["duty of care", "comparative negligence", "assumption of risk"],
+            "supporting_evidence": "phone use, failure to monitor, attention lapse",
+            "challenges": "manufacturer marketing, system design encouraging disengagement"
+          },
+          {
+            "theory": "shared_distributed_liability",
+            "variants": ["proportional responsibility", "joint and several", "enterprise liability"],
+            "supporting_evidence": "complex interaction of human and machine failures",
+            "challenges": "damage allocation methodology, insurance coordination"
+          },
+          {
+            "theory": "regulatory_government_liability",
+            "variants": ["inadequate regulation", "approval process", "infrastructure design"],
+            "supporting_evidence": "voluntary safety standards, premature authorization",
+            "challenges": "sovereign immunity, political question doctrine"
+          }
+        ],
+        "stakeholder_positions": {
+          "automotive_industry": {
+            "liability_preference": "human operator responsibility",
+            "policy_goals": "innovation protection, industry insurance pool",
+            "legal_arguments": "superior safety record vs. human drivers"
+          },
+          "consumer_advocates": {
+            "liability_preference": "strict manufacturer liability",
+            "policy_goals": "user protection, transparent algorithms",
+            "legal_arguments": "corporate risk-shifting prevention"
+          },
+          "insurance_industry": {
+            "liability_preference": "clear assignment for claims processing",
+            "policy_goals": "mandatory coverage, federal uniformity",
+            "legal_arguments": "actuarial data needs, premium calculation"
+          }
+        },
+        "technical_legal_complexity": {
+          "ai_black_box_problem": "neural network interpretability for legal causation",
+          "reasonable_care_standards": "difficulty establishing AI behavior norms",
+          "causal_chain_analysis": "multiple contributing factors, counterfactual analysis",
+          "expert_witness_qualification": "AI system testimony requirements"
+        },
+        "policy_frameworks": [
+          {
+            "framework": "innovation_focused",
+            "liability_approach": "minimize manufacturer liability",
+            "regulatory_approach": "expedited safety approvals",
+            "compensation": "insurance pools vs. litigation"
+          },
+          {
+            "framework": "safety_first_regulatory",
+            "liability_approach": "strict manufacturer liability",
+            "regulatory_approach": "comprehensive pre-market testing",
+            "compensation": "robust government oversight"
+          },
+          {
+            "framework": "adaptive_evolutionary",
+            "liability_approach": "iterative framework development",
+            "regulatory_approach": "flexible standards with technological advancement",
+            "compensation": "multi-stakeholder governance"
+          }
+        ],
+        "areas_of_expert_disagreement": [
+          "Interpretation of tort law for AI decision-making",
+          "Balancing innovation incentives with victim compensation",
+          "Federal vs. state jurisdiction and regulatory authority",
+          "Role of industry standards vs. government regulation",
+          "Burden of proof for AI system defects",
+          "Integration of technical AI concepts with legal causation",
+          "Long-term societal implications vs. immediate legal frameworks"
+        ],
+        "novel_legal_questions": [
+          "Can AI systems be held to reasonable care standards?",
+          "How do courts assess defects in probabilistic systems?",
+          "What constitutes adequate warning for AI limitations?",
+          "How should liability evolve with technological advancement?",
+          "What role should algorithmic transparency play in liability?"
+        ]
+      }
+    },
+    "government_policy_domain": {
+      "low_complexity": {
+        "title": "Municipal Recycling Program Implementation",
+        "description": "Standard municipal recycling program expansion with established best practices",
+        "complexity_rationale": "Well-documented implementation models, clear cost-benefit analysis, minimal stakeholder conflict",
+        "policy_context": {
+          "jurisdiction": "mid-size city (population 85,000)",
+          "current_program": "voluntary curbside recycling (35% participation)",
+          "proposed_expansion": "mandatory recycling with organic waste collection",
+          "policy_goal": "achieve 60% waste diversion by 2027"
+        },
+        "implementation_details": {
+          "service_model": "weekly collection of recyclables and organics",
+          "equipment": "standardized bins provided by city",
+          "contractor": "existing waste management company can expand services",
+          "enforcement": "warning notices followed by fines for non-compliance"
+        },
+        "cost_benefit_analysis": {
+          "implementation_cost": "$2.1M initial (bins, trucks, education)",
+          "annual_operating_cost": "$850K (offset by reduced landfill fees)",
+          "revenue_sources": ["state recycling grants", "reduced waste disposal costs", "material sales"],
+          "payback_period": "4.2 years",
+          "environmental_benefits": "45% reduction in landfill waste"
+        },
+        "stakeholder_positions": {
+          "environmental_groups": "strongly supportive",
+          "business_community": "supportive with adequate transition time",
+          "residents": "62% support in recent survey",
+          "waste_industry": "neutral (expanded contracts offset costs)"
+        },
+        "established_precedents": [
+          "similar programs in 12 comparable cities with 85%+ success rate",
+          "state-level best practices guidelines available",
+          "proven contractor experience in region"
+        ],
+        "minimal_disagreement_areas": [
+          "Phase-in timeline (6 months vs. 12 months)",
+          "Fine structure ($25 vs. $50 for violations)",
+          "Educational campaign budget allocation"
+        ],
+        "expected_outcome": "routine approval with minor modifications to implementation timeline"
+      },
+      "medium_complexity": {
+        "title": "State Medicaid Expansion Decision with Federal-State Policy Tensions",
+        "description": "State-level decision on Medicaid expansion involving federal funding, state politics, and healthcare access",
+        "complexity_rationale": "Competing policy objectives, federal-state tensions, significant stakeholder disagreement, fiscal uncertainty",
+        "policy_context": {
+          "state": "non-expansion state considering adoption",
+          "federal_framework": "ACA Medicaid expansion with 90% federal funding",
+          "current_coverage": "Medicaid eligibility at 44% of federal poverty level",
+          "expansion_target": "coverage up to 138% FPL (estimated 180,000 additional enrollees)"
+        },
+        "federal_state_dynamics": {
+          "federal_position": {
+            "funding": "90% federal match for expansion population",
+            "requirements": "compliance with federal Medicaid standards",
+            "flexibility": "limited state waiver options for expansion population",
+            "political_pressure": "administration encouraging expansion"
+          },
+          "state_constraints": {
+            "budget_impact": "$95M annual state share by year 3",
+            "legislative_approval": "required for expansion adoption",
+            "existing_commitments": "current Medicaid program at 18% of state budget",
+            "political_opposition": "rural legislators concerned about federal dependency"
+          }
+        },
+        "competing_policy_frameworks": [
+          {
+            "framework": "healthcare_access_maximization",
+            "priority": "expand coverage to low-income adults",
+            "supporting_evidence": [
+              "180,000 uninsured adults would gain coverage",
+              "rural hospital financial stability improvement",
+              "preventive care access reducing emergency department use"
+            ],
+            "advocates": ["hospital associations", "healthcare advocates", "urban legislators"]
+          },
+          {
+            "framework": "fiscal_conservatism",
+            "priority": "state budget sustainability and federal dependency concerns",
+            "supporting_evidence": [
+              "uncertain future federal funding commitments",
+              "state budget already strained with existing priorities",
+              "potential federal mandates increasing state costs"
+            ],
+            "advocates": ["taxpayer groups", "fiscal conservatives", "rural legislators"]
+          },
+          {
+            "framework": "federalism_principles",
+            "priority": "state autonomy in healthcare policy decisions",
+            "supporting_evidence": [
+              "federal program design limits state innovation",
+              "one-size-fits-all approach may not fit state needs",
+              "historical federal program expansions with shifting requirements"
+            ],
+            "advocates": ["state sovereignty advocates", "conservative policy institutes"]
+          }
+        ],
+        "stakeholder_positions": {
+          "healthcare_providers": {
+            "hospitals": "strongly support (uncompensated care reduction)",
+            "physicians": "mixed support (reimbursement vs. administrative burden)",
+            "safety_net_clinics": "strongly support (patient coverage)"
+          },
+          "business_community": {
+            "large_employers": "support (reduced employee insurance costs)",
+            "small_business": "mixed (workforce health vs. tax concerns)",
+            "chambers_of_commerce": "regional variation in position"
+          },
+          "advocacy_groups": {
+            "patient_advocates": "strongly support expansion",
+            "disability_rights": "support with concerns about service capacity",
+            "taxpayer_groups": "oppose due to cost concerns"
+          },
+          "political_actors": {
+            "governor": "cautiously supportive with budget safeguards",
+            "legislative_leadership": "divided along party lines",
+            "rural_representatives": "concerned about sustainability"
+          }
+        },
+        "implementation_options": [
+          {
+            "option": "full_expansion",
+            "description": "standard ACA expansion to 138% FPL",
+            "federal_funding": "90% match",
+            "state_flexibility": "limited",
+            "political_feasibility": "moderate"
+          },
+          {
+            "option": "waiver_based_expansion",
+            "description": "expansion with work requirements and premiums",
+            "federal_funding": "90% match with waiver approval",
+            "state_flexibility": "moderate",
+            "political_feasibility": "higher among conservatives"
+          },
+          {
+            "option": "phased_expansion",
+            "description": "gradual income eligibility increases over 3 years",
+            "federal_funding": "90% match for eligible population",
+            "state_flexibility": "implementation timing",
+            "political_feasibility": "compromise potential"
+          },
+          {
+            "option": "alternative_state_program",
+            "description": "state-designed coverage using existing funding",
+            "federal_funding": "current match rates only",
+            "state_flexibility": "high",
+            "political_feasibility": "moderate but limited impact"
+          }
+        ],
+        "areas_of_legitimate_disagreement": [
+          "Weight given to healthcare access vs. fiscal sustainability",
+          "Assessment of federal funding reliability over time",
+          "State vs. federal role in healthcare coverage decisions",
+          "Economic impact analysis methodology and assumptions",
+          "Political feasibility vs. policy optimality trade-offs",
+          "Rural vs. urban impact distribution and representation"
+        ],
+        "complicating_factors": [
+          "Federal policy uncertainty with potential administration changes",
+          "State budget cycles and competing spending priorities",
+          "Healthcare industry lobbying and political contributions",
+          "Public opinion variation by geographic region within state",
+          "Interaction with other state healthcare initiatives"
+        ]
+      },
+      "high_complexity": {
+        "title": "Multi-Jurisdictional Opioid Crisis Response Coordination",
+        "description": "Coordinating federal, state, and local responses to opioid crisis with competing approaches and overlapping authorities",
+        "complexity_rationale": "Multiple government levels, competing regulatory frameworks, criminal vs. health approaches, resource allocation disputes",
+        "crisis_context": {
+          "scope": "nationwide opioid epidemic with regional variation",
+          "mortality": "107,000 overdose deaths annually (2023 data)",
+          "economic_impact": "$1.02 trillion annual societal cost",
+          "affected_populations": "all demographics with particular impact on working-age adults",
+          "geographic_variation": "rural areas heavily affected, urban centers with different patterns"
+        },
+        "multi_jurisdictional_complexity": {
+          "federal_authorities": {
+            "dea": "drug scheduling, prescription monitoring, enforcement",
+            "fda": "medication approval, prescribing guidelines",
+            "cdc": "public health surveillance, prevention guidelines",
+            "samhsa": "treatment funding, program standards",
+            "cms": "Medicare/Medicaid coverage policies",
+            "doj": "criminal enforcement, pharmaceutical litigation"
+          },
+          "state_authorities": {
+            "health_departments": "surveillance, prevention programs, treatment licensing",
+            "regulatory_boards": "healthcare provider licensing and oversight",
+            "insurance_departments": "coverage mandate enforcement",
+            "criminal_justice": "enforcement, drug courts, incarceration policies",
+            "budgeting": "resource allocation across agencies and programs"
+          },
+          "local_authorities": {
+            "public_health": "harm reduction, needle exchange, overdose response",
+            "law_enforcement": "street-level enforcement, emergency response",
+            "social_services": "housing, employment, family services",
+            "healthcare_systems": "emergency department protocols, treatment access",
+            "education": "prevention programs, school-based interventions"
+          }
+        },
+        "competing_policy_approaches": [
+          {
+            "approach": "criminal_justice_focused",
+            "primary_strategy": "enforcement and incarceration as deterrent",
+            "key_policies": [
+              "enhanced penalties for fentanyl trafficking",
+              "prescription drug monitoring programs",
+              "healthcare provider prosecution for overprescribing",
+              "street-level dealer enforcement"
+            ],
+            "resource_allocation": "70% enforcement, 20% treatment, 10% prevention",
+            "supporting_jurisdictions": "federal DEA, many rural counties, some states",
+            "theoretical_basis": "deterrence theory, public safety priority",
+            "evidence_base": "mixed results, high incarceration costs, limited impact on supply"
+          },
+          {
+            "approach": "public_health_focused",
+            "primary_strategy": "treatment and harm reduction as disease management",
+            "key_policies": [
+              "medication-assisted treatment expansion",
+              "needle exchange and safe consumption sites",
+              "overdose reversal drug distribution",
+              "healthcare coverage expansion for treatment"
+            ],
+            "resource_allocation": "20% enforcement, 60% treatment, 20% prevention",
+            "supporting_jurisdictions": "CDC, many urban areas, some progressive states",
+            "theoretical_basis": "disease model, public health approach",
+            "evidence_base": "strong treatment effectiveness, reduced mortality and morbidity"
+          },
+          {
+            "approach": "supply_reduction_focused",
+            "primary_strategy": "pharmaceutical industry accountability and prescription controls",
+            "key_policies": [
+              "pharmaceutical manufacturer litigation and settlements",
+              "prescribing guideline enforcement",
+              "pill mill shutdowns",
+              "international supply chain interdiction"
+            ],
+            "resource_allocation": "40% enforcement, 40% treatment, 20% prevention",
+            "supporting_jurisdictions": "DOJ, state attorneys general, some federal agencies",
+            "theoretical_basis": "supply-side economics, corporate accountability",
+            "evidence_base": "reduced prescription opioids, but increased illicit fentanyl use"
+          },
+          {
+            "approach": "comprehensive_social_determinants",
+            "primary_strategy": "address underlying economic and social causes",
+            "key_policies": [
+              "economic development in affected communities",
+              "mental health and trauma treatment expansion",
+              "housing and employment support programs",
+              "community-based prevention and recovery support"
+            ],
+            "resource_allocation": "15% enforcement, 35% treatment, 50% prevention/social support",
+            "supporting_jurisdictions": "some progressive localities, social service agencies",
+            "theoretical_basis": "social determinants of health, community development",
+            "evidence_base": "promising but limited long-term studies"
+          }
+        ],
+        "jurisdictional_conflicts": [
+          {
+            "conflict": "federal_vs_state_marijuana_policy",
+            "description": "federal prohibition vs. state medical/recreational legalization",
+            "impact_on_opioids": "conflicts over marijuana as opioid alternative",
+            "resolution_challenges": "federal supremacy vs. state sovereignty"
+          },
+          {
+            "conflict": "state_vs_local_enforcement_priorities",
+            "description": "state focus on trafficking vs. local focus on treatment",
+            "impact_on_opioids": "resource allocation and enforcement consistency",
+            "resolution_challenges": "local autonomy vs. state coordination"
+          },
+          {
+            "conflict": "urban_vs_rural_approach_differences",
+            "description": "urban harm reduction vs. rural abstinence-based treatment",
+            "impact_on_opioids": "different treatment philosophies and resource needs",
+            "resolution_challenges": "political representation and cultural differences"
+          },
+          {
+            "conflict": "federal_agency_coordination",
+            "description": "DEA enforcement vs. HHS treatment priorities",
+            "impact_on_opioids": "conflicting signals to providers and communities",
+            "resolution_challenges": "agency mission differences and bureaucratic silos"
+          }
+        ],
+        "resource_allocation_disputes": {
+          "federal_funding_streams": {
+            "samhsa_grants": "$6.8B annually, formula and competitive grants",
+            "cdc_prevention": "$495M annually, state and local distribution",
+            "doj_enforcement": "$2.1B annually, law enforcement focus",
+            "litigation_settlements": "$50B+ from pharmaceutical companies over 18 years"
+          },
+          "allocation_disagreements": [
+            "treatment vs. enforcement funding ratios",
+            "urban vs. rural resource distribution formulas",
+            "evidence-based vs. politically popular programs",
+            "short-term crisis response vs. long-term prevention investment"
+          ]
+        },
+        "competing_evidence_interpretations": [
+          {
+            "evidence_area": "medication_assisted_treatment_effectiveness",
+            "interpretation_a": "gold standard with 50%+ reduction in mortality",
+            "interpretation_b": "substituting one addiction for another, concerns about diversion",
+            "policy_implications": "treatment expansion vs. abstinence-only approaches"
+          },
+          {
+            "evidence_area": "harm_reduction_impact",
+            "interpretation_a": "reduces disease transmission and overdose deaths",
+            "interpretation_b": "enables continued drug use and community deterioration",
+            "policy_implications": "safe consumption sites vs. zero-tolerance policies"
+          },
+          {
+            "evidence_area": "enforcement_effectiveness",
+            "interpretation_a": "arrests and incarceration have minimal impact on drug availability",
+            "interpretation_b": "enforcement deters use and disrupts distribution networks",
+            "policy_implications": "resource reallocation vs. enhanced enforcement"
+          }
+        ],
+        "areas_of_expert_disagreement": [
+          "Optimal balance between criminal justice and public health approaches",
+          "Federal vs. state/local authority in drug policy implementation",
+          "Resource allocation across prevention, treatment, and enforcement",
+          "Role of pharmaceutical industry accountability in ongoing crisis",
+          "Integration of mental health, addiction, and social services",
+          "Evidence standards for evaluating policy effectiveness",
+          "Political feasibility vs. evidence-based policy optimization",
+          "Coordination mechanisms across multiple agencies and jurisdictions",
+          "Long-term vs. short-term policy priorities and success metrics"
+        ],
+        "implementation_challenges": [
+          "Bureaucratic silos preventing coordination",
+          "Political cycles disrupting long-term policy consistency",
+          "Funding mechanisms that incentivize turf protection",
+          "Cultural and ideological differences across jurisdictions",
+          "Capacity constraints in treatment and prevention systems",
+          "Legal and regulatory barriers to evidence-based approaches"
+        ]
+      }
+    }
+  }
+}
+

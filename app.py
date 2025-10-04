@@ -4,6 +4,7 @@ from typing import List, Tuple, Generator
 import re
 import tiktoken
 from dotenv import load_dotenv
+import json
 
 load_dotenv() # Load variables from .env file
 
@@ -110,7 +111,33 @@ def calculate_cost_and_tokens(history: List[dict], model_map: dict):
     return total_tokens, total_cost
 
 
-SUGGESTED_QUESTION = """A mid-sized country faces a resurgence of a novel respiratory virus. Vaccination rates have plateaued between 45-65%, ICU capacity varies between 75-95% across regions, and economic recovery remains fragile. Recent epidemiological studies suggest transmission rates may be 30-60% higher than initial models predicted. The government is considering reintroducing strict lockdowns for 4-8 weeks to suppress transmission before winter. Should it do so? Justify your position with evidence-backed analysis of epidemiological risk, economic stability, civil liberties, and public trust. Provide specific citations for key empirical claims and measurable predictions your approach would generate."""
+def load_test_cases(filepath: str) -> dict:
+    """Loads test cases from the new JSON format into a dictionary mapping titles to prompts."""
+    cases = {"Custom Question": ""} # Default option
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        # The new structure is a list under the "test_cases" key
+        for case in data.get("test_cases", []):
+            domain = case.get("domain")
+            complexity = case.get("complexity")
+            title = case.get("title")
+            prompt = case.get("prompt")
+            
+            if all([domain, complexity, title, prompt]):
+                # Format a more descriptive title for the dropdown
+                display_title = f"[{domain.replace('_', ' ').title()}/{complexity.title()}] {title}"
+                cases[display_title] = prompt
+
+    except (FileNotFoundError, json.JSONDecodeError):
+        # If file is missing or corrupt, add a fallback question
+        cases["Default Scenario"] = "A mid-sized country faces a resurgence of a novel respiratory virus. Vaccination rates have plateaued between 45-65%, ICU capacity varies between 75-95% across regions, and economic recovery remains fragile. Recent epidemiological studies suggest transmission rates may be 30-60% higher than initial models predicted. The government is considering reintroducing strict lockdowns for 4-8 weeks to suppress transmission before winter. Should it do so? Justify your position with evidence-backed analysis of epidemiological risk, economic stability, civil liberties, and public trust. Provide specific citations for key empirical claims and measurable predictions your approach would generate."
+    return cases
+
+# Load test cases at startup from the new file
+TEST_CASES = load_test_cases("content/4domains_3complexity_16testcases_4Oct25.json")
+
 
 MODEL_MAP = {
     # Hypothetical
@@ -334,7 +361,7 @@ with gr.Blocks(
             gr.Markdown("# Discursus: A System for Critical LLM Discourse")
 
     with gr.Row():
-        primary_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="GPT-5", label="Primary Model", scale=3)
+        primary_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Gemini 2.5 Pro", label="Primary Model", scale=3)
         critique_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Claude 4.5 Sonnet", label="Critique Model", scale=3)
         api_provider_switch = gr.Checkbox(label="Use OpenRouter", value=True, scale=1)
         cost_display = gr.Textbox(label="Est. Cost", value="Est. Cost: $0.0000", interactive=False, scale=1)
@@ -344,8 +371,15 @@ with gr.Blocks(
     chatbot = gr.Chatbot(label="Conversation", height=600, type="messages")
 
     with gr.Row():
+        example_questions_dd = gr.Dropdown(
+            choices=list(TEST_CASES.keys()), 
+            label="Select an Example Question",
+            value=list(TEST_CASES.keys())[0] # Default to 'Custom Question'
+        )
+
+    with gr.Row():
         with gr.Column(scale=10):
-            user_input = gr.Textbox(show_label=False, placeholder="Enter your message or use the suggested question...", lines=3, value=SUGGESTED_QUESTION)
+            user_input = gr.Textbox(show_label=False, placeholder="Select an example or enter a custom question...", lines=4)
         with gr.Column(scale=1, min_width=80):
             send_btn = gr.Button("Send", variant="primary")
         with gr.Column(scale=1, min_width=120):
@@ -384,6 +418,16 @@ with gr.Blocks(
 
     file_state = gr.State([])
     last_critique_state = gr.State("")
+
+    def update_input_from_example(example_title):
+        """Updates the user input textbox when an example is selected."""
+        return gr.update(value=TEST_CASES.get(example_title, ""))
+
+    example_questions_dd.change(
+        fn=update_input_from_example,
+        inputs=[example_questions_dd],
+        outputs=[user_input]
+    )
 
     def handle_send(user_question, history, p_model, files, use_openrouter):
         if not user_question.strip():

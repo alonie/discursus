@@ -1,0 +1,198 @@
+{
+  "test_cases": [
+    {
+      "id": "medical_uti_low",
+      "domain": "medical",
+      "complexity": "low",
+      "title": "Uncomplicated Urinary Tract Infection Management",
+      "prompt": "A 23-year-old female college student presents with a 2-day history of burning during urination and urinary frequency/urgency. She reports mild suprapubic discomfort but denies fever, flank pain, or vaginal discharge. She is sexually active with barrier contraception and has no previous UTIs.\n\nVitals: BP 110/70, HR 72, Temp 98.4°F, RR 16\nPhysical exam: Well-appearing, soft abdomen with mild suprapubic tenderness, no CVA tenderness\nUrinalysis: Positive nitrites, leukocyte esterase 2+, WBC >50/hpf, RBC 5-10/hpf, many bacteria\nPregnancy test: Negative\n\nWhat is the appropriate management for this patient?",
+      "metadata": {
+        "standard_treatment": "Nitrofurantoin 100mg BID x 5 days OR TMP-SMX DS BID x 3 days",
+        "expected_outcome": ">95% cure rate",
+        "areas_of_minimal_disagreement": ["choice between nitrofurantoin vs TMP-SMX", "3-day vs 5-day duration", "need for follow-up culture"]
+      }
+    },
+    {
+      "id": "medical_chest_pain_medium",
+      "domain": "medical",
+      "complexity": "medium",
+      "title": "Atypical Chest Pain Risk Stratification and Disposition Decision",
+      "prompt": "A 52-year-old female accountant presents to the ED at 2:30 AM with chest discomfort that started at 8 PM during dinner. She describes heavy pressure left of center, occasionally radiating to her left jaw, with episodes lasting 5-15 minutes. The pain occurred at rest and was partially relieved by antacids. She reports mild shortness of breath with walking but denies nausea or diaphoresis.\n\nPMH: Well-controlled hypertension (lisinopril 10mg), hyperlipidemia (atorvastatin 20mg x 3 years), hypothyroidism (levothyroxine 75mcg)\nFamily History: Mother MI at 68, father stroke at 74\nSocial: Never smoker, sedentary lifestyle, recent weight gain, BMI 29\n\nVitals: BP 156/94, HR 78, RR 16, O2 sat 98% on RA, afebrile\nPhysical: Mildly anxious but comfortable at rest, cardiovascular exam normal (RRR, no murmurs/rubs/gallops, no JVD), lungs clear, no edema, 2+ pulses\n\nECG: Sinus rhythm rate 76, normal intervals, no ST elevation/depression, possible minimal T-wave flattening V4-V5\nTroponin I: <0.01 ng/mL (normal <0.04)\nCMP: Normal except glucose 118\nCBC: Normal\n\nHEART Score: 4 (intermediate risk - 2.5% risk MACE at 6 weeks)\nTIMI Score: 1 (low-intermediate risk)\n\nWhat is the appropriate disposition for this patient? Consider options including: discharge home, observation with serial troponins, stress testing, CT coronary angiography, or admission for rule-out MI. Justify your decision accounting for risk stratification, resource utilization, and integration of patient preferences.",
+      "metadata": {
+        "key_tensions": ["atypical symptoms in middle-aged women", "family history weight", "HEART vs TIMI scoring", "cost-effectiveness of strategies", "patient preference integration"],
+        "disposition_options": ["discharge_home", "observation_serial_troponins", "stress_testing", "ct_coronary_angiography", "admission_rule_out_mi"]
+      }
+    },
+    {
+      "id": "medical_acs_pe_high",
+      "domain": "medical",
+      "complexity": "high",
+      "title": "ACS vs PE Overlap Syndrome with Competing Treatment Approaches",
+      "prompt": "A 45-year-old male presents with chest pain and overlapping clinical features suggesting both acute coronary syndrome (ACS) and pulmonary embolism (PE). Biomarkers show elevated troponin, D-dimer, and BNP, creating genuine diagnostic uncertainty.\n\nThe critical clinical dilemma: Immediate ACS treatment with dual antiplatelet therapy substantially increases bleeding risk if the patient actually has PE requiring anticoagulation. Conversely, withholding ACS therapy to exclude PE first risks progression of NSTEMI.\n\nCompeting Approaches:\n1) Treat-highest-risk-first: Immediate ACS-standard therapy based on TIMI scoring and troponin elevation\n2) Diagnose-then-treat: Withhold aggressive therapy until PE excluded via imaging due to bleeding risk\n3) Concurrent pathway: Treat ACS while obtaining rapid diagnostic imaging for PE\n\nProvide your recommended approach with:\n- Evidence-based reasoning for your choice\n- Specific management of the anticoagulation paradox\n- Diagnostic sequencing and timing\n- How you would handle the scenario if imaging reveals both ACS and PE\n- Research gaps this case exposes",
+      "metadata": {
+        "source": "Previously analyzed deliberative AI debate",
+        "documented_emergent_behaviors": ["standards escalation", "collective error detection", "novel framework development", "citation integrity verification"],
+        "key_challenge": "Anticoagulation Paradox - competing bleeding vs thrombotic risks",
+        "research_gaps": ["integrated ACS/PE risk tools", "optimal antithrombotic regimens under uncertainty", "triple rule-out CCTA cost-effectiveness"]
+      }
+    },
+    {
+      "id": "scientific_clinical_trial_low",
+      "domain": "scientific",
+      "complexity": "low",
+      "title": "Standard Statistical Analysis of Clinical Trial Data",
+      "prompt": "You are analyzing a double-blind, randomized, parallel-group trial comparing Drug A vs Drug B (n=100 each) with a primary endpoint of mean reduction in systolic BP at 12 weeks. The study was powered at 80% to detect a 5 mmHg difference.\n\nData Summary:\nDrug A: Baseline SBP 152.3 ± 12.4 mmHg → Week 12: 138.7 ± 11.2 mmHg (mean reduction 13.6 ± 8.3 mmHg, 8% dropout)\nDrug B: Baseline SBP 151.8 ± 13.1 mmHg → Week 12: 142.1 ± 12.8 mmHg (mean reduction 9.7 ± 9.1 mmHg, 12% dropout)\n\nData quality: Minimal missing data, no protocol violations affecting primary analysis, normal distribution, variance assumptions met (Levene's test p=0.24)\n\nWhat statistical analysis should be performed and what are the expected results? Address choice of test, handling of missing data, and clinical vs statistical significance.",
+      "metadata": {
+        "standard_analysis": "independent t-test",
+        "expected_result": "3.9 mmHg difference (95% CI: 1.2-6.6), p=0.005",
+        "minimal_disagreement": ["missing data imputation method", "protocol violator inclusion", "clinical significance threshold"]
+      }
+    },
+    {
+      "id": "scientific_pcl_gene_medium",
+      "domain": "scientific",
+      "complexity": "medium",
+      "title": "Polycomblike Gene Function in Drosophila Development",
+      "prompt": "The polycomblike (Pcl) gene in Drosophila shows conflicting evidence about its functional mechanism in developmental gene regulation. Two competing hypotheses exist:\n\nHypothesis 1 - Quantitative Dosage Model: Pcl functions through gene dosage effects with linear dose-response relationships. Supporting evidence includes Pcl mutant phenotypes showing dosage sensitivity and overexpression rescuing some defects, consistent with classical genetics dosage compensation models.\n\nHypothesis 2 - Qualitative Switching Model: Pcl acts as a molecular switch with discrete on/off states in different developmental contexts. Supporting evidence includes context-dependent phenotypes and non-linear response to Pcl levels, consistent with epigenetic bistability and developmental switches.\n\nExperimental Evidence:\n- Complex epistatic relationships with other Polycomb group genes\n- Dynamic temporal and spatial expression during development\n- Protein complex formation varies by developmental stage\n- Mutant phenotypes show both dosage-sensitive and threshold effects\n\nConflicting Interpretations:\n- Whether overexpression phenotypes reflect normal function or artifacts\n- Significance of context-dependent vs constitutive Pcl activities\n- Integration of genetic and biochemical evidence\n\nWhich hypothesis is better supported, or should a synthesis framework be developed? Provide your analysis with specific evaluation of the experimental evidence and theoretical frameworks.",
+      "metadata": {
+        "source": "Biology debate transcript from deliberative AI testing",
+        "documented_emergent_behaviors": ["collective rejection of false claims", "standards escalation requiring citations", "framework synthesis combining models"],
+        "research_gaps": ["mechanistic understanding of dosage sensitivity", "temporal dynamics of Pcl complex formation", "integration of developmental and molecular data"]
+      }
+    },
+    {
+      "id": "scientific_pandemic_strategy_high",
+      "domain": "scientific",
+      "complexity": "high",
+      "title": "Novel Pandemic Intervention Strategy Assessment",
+      "prompt": "A novel respiratory pathogen has emerged with the following characteristics:\n- R0 estimate: 3.5-5.2 (95% CI)\n- Incubation: 3-7 days (median 4), pre-symptomatic transmission confirmed, airborne\n- CFR estimate: 0.8-2.1% (wide CI due to limited data)\n- Hospitalization rate: 5-12% of confirmed cases\n\nPopulation Context:\n- Prior immunity: 25% estimated protection from previous infections\n- Vaccine cross-protection: 30-50% efficacy\n- Healthcare capacity: 85-95% in major cities\n- Economic context: Fragile recovery, inflation concerns\n- Social factors: Compliance fatigue, educational priorities\n\nIntervention Strategies Under Consideration:\n\n1) Comprehensive Lockdown: Stay-at-home orders, school closures, travel restrictions\n   - Predicted transmission reduction: 70-80%\n   - Economic impact: GDP reduction 8-15%\n   - Social impact: Educational disruption, mental health effects\n\n2) Targeted Protection: Enhanced protection >65, mask mandates, testing protocols\n   - Predicted transmission reduction: 40-60%\n   - Economic impact: GDP reduction 2-4%\n   - Social impact: Minimal educational disruption\n\n3) Adaptive Response: Trigger-based escalation, regional variation, flexible protocols\n   - Predicted transmission reduction: 30-70% (variable)\n   - Economic impact: GDP reduction 3-8%\n   - Social impact: Moderate disruption with adaptability\n\n4) Medical Countermeasures: Rapid vaccine development, therapeutic research, voluntary measures\n   - Predicted transmission reduction: Limited initially\n   - Economic impact: GDP reduction 1-3%\n   - Social impact: Minimal restrictions, potential high morbidity\n\nWhich strategy should be adopted? Provide analysis that:\n- Integrates epidemiological modeling, economic epidemiology, and public health ethics frameworks\n- Addresses evidence gaps (true IFR, immunity duration, NPI effectiveness, long-term consequences)\n- Weighs economic vs health outcomes\n- Considers public compliance sustainability\n- Quantifies uncertainty in decision-making",
+      "metadata": {
+        "competing_frameworks": ["epidemiological_modeling", "economic_epidemiology", "public_health_ethics"],
+        "evidence_gaps": ["true IFR", "immunity duration", "NPI effectiveness for variant", "long-term health consequences", "economic recovery patterns"],
+        "key_disagreements": ["economic vs health outcome weighting", "limited data interpretation", "compliance sustainability", "ethical principle integration", "uncertainty quantification"]
+      }
+    },
+    {
+      "id": "legal_nda_breach_low",
+      "domain": "legal",
+      "complexity": "low",
+      "title": "Standard Employment Contract NDA Violation",
+      "prompt": "An employee signed a standard employment contract with an NDA clause defining confidential information as customer lists, pricing strategies, and proprietary processes. The NDA had a 2-year post-employment duration with employment and confidential access as consideration.\n\nFactual Background:\n- Employee departed January 2024\n- Started with direct competitor March 2024\n- Shared: detailed customer list with contact info and purchase history, pricing strategies and discount structures, proprietary sales presentation templates\n\nEvidence:\n- Original signed NDA with clear terms\n- Email records showing information transmission\n- Customer list comparison showing identical formatting\n- Presentation materials with company templates\n- Former colleagues' sworn statements\n- New employer inadvertently confirmed receiving information\n\nJurisdiction: California (NDA enforceable despite general non-compete restrictions)\n\nAnalyze the breach of contract claim, likely outcome including liability determination, injunctive relief, damages calculation, and attorney fees recovery.",
+      "metadata": {
+        "likely_outcome": {
+          "liability": "clear liability for breach",
+          "injunctive_relief": "permanent injunction against further use",
+          "damages": "customer list value (15-20% annual revenue) plus lost profits",
+          "attorney_fees": "recoverable under contract terms"
+        },
+        "minimal_disagreement": ["damages calculation methodology", "injunctive relief duration", "punitive damages appropriateness"]
+      }
+    },
+    {
+      "id": "legal_zoning_variance_medium",
+      "domain": "legal",
+      "complexity": "medium",
+      "title": "Municipal Zoning Variance for Mixed-Use Development",
+      "prompt": "A developer proposes a 45-unit mixed-use building with ground-floor retail in a transitional zone between residential and commercial districts. Current zoning: R-2 residential (max 25 units/acre). Requested variance: density increase to 35 units/acre plus commercial use.\n\nSupporting Factors:\n- Comprehensive plan encourages mixed-use in transitional areas\n- Housing goals: increase affordable housing by 15% over 5 years\n- Project includes 12 affordable units (26% of total)\n- Located 0.3 miles from bus rapid transit\n- LEED Gold certification planned\n- Estimated $180,000 annual tax revenue increase\n\nOpposing Factors:\n- Neighbor concerns: traffic congestion, parking spillover, character incompatibility with single-family area\n- 18-month construction disruption\n- Previous denials of similar density increases (precedent)\n- Questions about sewer and stormwater capacity\n- Elementary school at 95% enrollment\n\nRegulatory Framework - Variance Standards:\n- Unnecessary hardship due to lot characteristics\n- Must serve broader public good\n- No substantial detriment to neighboring properties\n- Consistency with municipal planning goals\n\nDecision authority: Planning commission with city council appeal. Required public hearing with neighbor notification.\n\nShould the planning commission grant or deny the variance? Provide legal analysis of the variance standards, policy arguments, and address areas of legitimate disagreement including: interpretation of 'unnecessary hardship', weight of comprehensive plan vs existing zoning, balancing affordable housing with neighborhood character, infrastructure adequacy assessment, and precedential impact.",
+      "metadata": {
+        "key_tensions": ["comprehensive_plan_vs_zoning", "affordable_housing_vs_neighborhood_character", "infrastructure_capacity", "precedent_concerns"],
+        "compromise_options": ["reduced density (30 units/acre)", "phased development", "enhanced design standards", "sunset clause"]
+      }
+    },
+    {
+      "id": "legal_av_liability_high",
+      "domain": "legal",
+      "complexity": "high",
+      "title": "Autonomous Vehicle Collision Legal Liability Framework",
+      "prompt": "Interstate highway collision, California, clear weather: Tesla Model Y (Full Self-Driving mode) vs Honda Civic with family. Outcome: 2 fatalities, 3 serious injuries. AV occupant had minor injuries but was texting for 15 seconds before collision (8-second attention lapse).\n\nTechnical Findings:\n- AV system operating within specifications, latest software\n- All sensors functioning normally\n- Algorithm misclassified stopped vehicle as moving slowly\n- 94% confidence level in driving decisions\n- Human operator inattentive, texting immediately before collision\n\nCompeting Legal Theories:\n\n1) Manufacturer Product Liability (strict liability/negligence/failure to warn)\n   - Supporting: Object misclassification, overconfident algorithm\n   - Challenges: Industry standard compliance, government approval\n\n2) Human Operator Negligence (duty of care/comparative negligence/assumption of risk)\n   - Supporting: Phone use, failure to monitor, attention lapse\n   - Challenges: Manufacturer marketing, system design encouraging disengagement\n\n3) Shared/Distributed Liability (proportional responsibility/joint and several/enterprise liability)\n   - Supporting: Complex interaction of human and machine failures\n   - Challenges: Damage allocation methodology, insurance coordination\n\n4) Regulatory/Government Liability (inadequate regulation/approval process/infrastructure design)\n   - Supporting: Voluntary safety standards, premature authorization\n   - Challenges: Sovereign immunity, political question doctrine\n\nStakeholder Positions:\n- Automotive industry: Human operator responsibility, innovation protection\n- Consumer advocates: Strict manufacturer liability, transparent algorithms\n- Insurance industry: Clear assignment for claims processing, mandatory coverage\n\nTechnical-Legal Complexity:\n- AI black box problem: Neural network interpretability for legal causation\n- Reasonable care standards: Difficulty establishing AI behavior norms\n- Causal chain analysis: Multiple contributing factors, counterfactual analysis\n\nDevelop a liability framework that addresses:\n- Which legal theory is most appropriate and why\n- How tort law should be interpreted for AI decision-making\n- Balance between innovation incentives and victim compensation\n- Federal vs state jurisdiction\n- Role of industry standards vs government regulation\n- Burden of proof for AI system defects\n- Integration of technical AI concepts with legal causation\n- Novel legal questions this case exposes",
+      "metadata": {
+        "competing_frameworks": ["innovation_focused", "safety_first_regulatory", "adaptive_evolutionary"],
+        "novel_legal_questions": ["AI reasonable care standards", "defect assessment in probabilistic systems", "adequate warning for AI limitations", "liability evolution with technology", "algorithmic transparency role"],
+        "key_disagreements": ["tort law interpretation for AI", "innovation vs compensation balance", "federal vs state authority", "industry vs government standards", "AI causation burden of proof"]
+      }
+    },
+    {
+      "id": "policy_recycling_low",
+      "domain": "government_policy",
+      "complexity": "low",
+      "title": "Municipal Recycling Program Implementation",
+      "prompt": "A mid-size city (population 85,000) currently has voluntary curbside recycling with 35% participation. The city proposes expanding to mandatory recycling with organic waste collection to achieve 60% waste diversion by 2027.\n\nImplementation Details:\n- Weekly collection of recyclables and organics\n- Standardized bins provided by city\n- Existing waste management contractor can expand services\n- Warning notices followed by fines for non-compliance\n\nCost-Benefit Analysis:\n- Implementation cost: $2.1M initial (bins, trucks, education)\n- Annual operating cost: $850K (offset by reduced landfill fees)\n- Revenue: State recycling grants, reduced disposal costs, material sales\n- Payback period: 4.2 years\n- Environmental benefit: 45% reduction in landfill waste\n\nStakeholder Positions:\n- Environmental groups: Strongly supportive\n- Business community: Supportive with adequate transition time\n- Residents: 62% support in recent survey\n- Waste industry: Neutral (expanded contracts offset costs)\n\nPrecedents: Similar programs in 12 comparable cities with 85%+ success rate. State-level best practices guidelines available.\n\nShould the city council approve this program? Address implementation timeline (6 vs 12 month phase-in), fine structure ($25 vs $50), and educational campaign budget allocation.",
+      "metadata": {
+        "expected_outcome": "routine approval with minor modifications",
+        "minimal_disagreement": ["phase-in timeline", "fine structure", "educational budget allocation"],
+        "established_precedents": "12 comparable cities, 85%+ success rate"
+      }
+    },
+    {
+      "id": "policy_medicaid_medium",
+      "domain": "government_policy",
+      "complexity": "medium",
+      "title": "State Medicaid Expansion Decision with Federal-State Policy Tensions",
+      "prompt": "A non-expansion state is considering adopting ACA Medicaid expansion. Current Medicaid eligibility: 44% of federal poverty level. Proposed expansion: coverage up to 138% FPL (estimated 180,000 additional enrollees).\n\nFederal-State Dynamics:\nFederal: 90% federal match, compliance with federal Medicaid standards, limited waiver options, administration encouraging expansion\nState: $95M annual state share by year 3, legislative approval required, current Medicaid at 18% of state budget, rural legislators concerned about federal dependency\n\nCompeting Frameworks:\n\n1) Healthcare Access Maximization\n   - 180,000 uninsured adults gain coverage\n   - Rural hospital financial stability improvement\n   - Preventive care access reducing ED use\n   - Advocates: Hospital associations, healthcare advocates, urban legislators\n\n2) Fiscal Conservatism\n   - Uncertain future federal funding\n   - State budget already strained\n   - Potential federal mandates increasing state costs\n   - Advocates: Taxpayer groups, fiscal conservatives, rural legislators\n\n3) Federalism Principles\n   - Federal design limits state innovation\n   - One-size-fits-all may not fit state needs\n   - Historical federal program expansion with shifting requirements\n   - Advocates: State sovereignty advocates, conservative policy institutes\n\nStakeholder Positions:\n- Hospitals: Strongly support (uncompensated care reduction)\n- Physicians: Mixed (reimbursement vs administrative burden)\n- Large employers: Support (reduced employee costs)\n- Small business: Mixed (workforce health vs tax concerns)\n\nImplementation Options:\n1) Full expansion (standard ACA, 90% match, limited flexibility)\n2) Waiver-based expansion (work requirements/premiums, 90% match with waiver, higher political feasibility)\n3) Phased expansion (gradual eligibility increases over 3 years)\n4) Alternative state program (state-designed, current match rates only, high flexibility)\n\nShould the state expand Medicaid? Provide analysis that:\n- Weighs healthcare access vs fiscal sustainability vs federalism concerns\n- Assesses federal funding reliability\n- Evaluates economic impact\n- Addresses political feasibility vs policy optimality\n- Considers rural vs urban impact distribution\n- Accounts for federal policy uncertainty and competing spending priorities",
+      "metadata": {
+        "key_tensions": ["access_vs_fiscal_sustainability", "federal_reliability", "state_vs_federal_role", "rural_vs_urban_impacts"],
+        "complicating_factors": ["federal policy uncertainty", "state budget cycles", "healthcare lobbying", "geographic opinion variation"]
+      }
+    },
+    {
+      "id": "policy_opioid_crisis_high",
+      "domain": "government_policy",
+      "complexity": "high",
+      "title": "Multi-Jurisdictional Opioid Crisis Response Coordination",
+      "prompt": "Nationwide opioid epidemic: 107,000 overdose deaths annually (2023), $1.02 trillion annual societal cost, all demographics affected with particular impact on working-age adults, rural areas heavily affected with different patterns in urban centers.\n\nMulti-Jurisdictional Complexity:\nFederal: DEA (drug scheduling, enforcement), FDA (medication approval, prescribing guidelines), CDC (surveillance, prevention), SAMHSA (treatment funding, standards), CMS (Medicare/Medicaid coverage), DOJ (criminal enforcement, pharmaceutical litigation)\nState: Health departments (surveillance, prevention, licensing), regulatory boards (provider oversight), insurance departments (coverage mandates), criminal justice (enforcement, drug courts), budgeting (resource allocation)\nLocal: Public health (harm reduction, needle exchange, overdose response), law enforcement (street enforcement, emergency response), social services (housing, employment), healthcare systems (ED protocols, treatment access), education (prevention, school programs)\n\nCompeting Policy Approaches:\n\n1) Criminal Justice-Focused (70% enforcement, 20% treatment, 10% prevention)\n   - Enhanced fentanyl trafficking penalties\n   - Prescription drug monitoring programs\n   - Healthcare provider prosecution for overprescribing\n   - Street-level dealer enforcement\n   - Supporting: Federal DEA, many rural counties, some states\n   - Evidence: Mixed results, high incarceration costs, limited supply impact\n\n2) Public Health-Focused (20% enforcement, 60% treatment, 20% prevention)\n   - Medication-assisted treatment expansion\n   - Needle exchange and safe consumption sites\n   - Overdose reversal drug distribution\n   - Healthcare coverage expansion for treatment\n   - Supporting: CDC, many urban areas, some progressive states\n   - Evidence: Strong treatment effectiveness, reduced mortality/morbidity\n\n3) Supply Reduction-Focused (40% enforcement, 40% treatment, 20% prevention)\n   - Pharmaceutical manufacturer litigation and settlements\n   - Prescribing guideline enforcement\n   - Pill mill shutdowns\n   - International supply chain interdiction\n   - Supporting: DOJ, state attorneys general, some federal agencies\n   - Evidence: Reduced prescription opioids, but increased illicit fentanyl\n\n4) Comprehensive Social Determinants (15% enforcement, 35% treatment, 50% prevention/social)\n   - Economic development in affected communities\n   - Mental health and trauma treatment expansion\n   - Housing and employment support\n   - Community-based prevention and recovery support\n   - Supporting: Some progressive localities, social service agencies\n   - Evidence: Promising but limited long-term studies\n\nJurisdictional Conflicts:\n- Federal prohibition vs state marijuana legalization (impact on opioid alternatives)\n- State trafficking focus vs local treatment focus (resource allocation)\n- Urban harm reduction vs rural abstinence-based treatment (philosophy differences)\n- DEA enforcement vs HHS treatment priorities (conflicting provider signals)\n\nResource Allocation Disputes:\n- SAMHSA grants: $6.8B annually\n- CDC prevention: $495M annually\n- DOJ enforcement: $2.1B annually\n- Litigation settlements: $50B+ over 18 years\n- Disputes: Treatment vs enforcement ratios, urban vs rural formulas, evidence-based vs politically popular programs, short-term vs long-term investment\n\nCompeting Evidence Interpretations:\n- Medication-assisted treatment: \"Gold standard with 50%+ mortality reduction\" vs \"Substituting one addiction for another\"\n- Harm reduction: \"Reduces disease transmission and overdose deaths\" vs \"Enables continued use and community deterioration\"\n- Enforcement: \"Arrests have minimal impact on availability\" vs \"Enforcement deters use and disrupts networks\"\n\nDevelop a coordinated multi-jurisdictional response framework that:\n- Determines optimal balance between criminal justice and public health approaches\n- Resolves federal vs state/local authority tensions\n- Allocates resources across prevention, treatment, and enforcement\n- Addresses pharmaceutical industry accountability\n- Integrates mental health, addiction, and social services\n- Establishes evidence standards for policy effectiveness\n- Balances political feasibility with evidence-based optimization\n- Creates coordination mechanisms across agencies and jurisdictions\n- Defines success metrics for long-term vs short-term priorities\n- Addresses implementation challenges: bureaucratic silos, political cycles, funding mechanisms, cultural differences, capacity constraints, legal barriers",
+      "metadata": {
+        "key_disagreements": ["criminal_vs_health_balance", "federal_vs_state_authority", "resource_allocation", "pharmaceutical_accountability", "service_integration", "evidence_standards", "political_vs_evidence_optimization", "coordination_mechanisms", "success_metrics"],
+        "implementation_challenges": ["bureaucratic silos", "political cycles", "funding incentives", "cultural differences", "capacity constraints", "legal barriers"]
+      }
+    },
+    {
+      "id": "policy_pandemic_lockdown",
+      "domain": "policy",
+      "complexity": "high",
+      "title": "Pandemic Lockdown Trade-off Decision",
+      "prompt": "A mid-sized country faces a resurgence of a novel respiratory virus. Vaccination rates have plateaued between 45-65%, ICU capacity varies between 75-95% across regions, and economic recovery remains fragile. Recent epidemiological studies suggest transmission rates may be 30-60% higher than initial models predicted. The government is considering reintroducing strict lockdowns for 4-8 weeks to suppress transmission before winter.\n\nShould it do so? Justify your position with evidence-backed analysis of epidemiological risk, economic stability, civil liberties, and public trust. Provide specific citations for key empirical claims and measurable predictions your approach would generate.",
+      "metadata": {
+        "anchors": "partial_objective",
+        "tags": ["decision-critical", "multi-domain", "high_disagreement"],
+        "key_dimensions": ["epidemiological_risk", "economic_impact", "civil_liberties", "public_trust"]
+      }
+    },
+    {
+      "id": "legal_surveillance_law",
+      "domain": "legal",
+      "complexity": "high",
+      "title": "Constitutional Surveillance Law Challenge",
+      "prompt": "A constitutional court is reviewing a new surveillance law permitting bulk collection of citizens' digital communications metadata without individual warrants, justified by counterterrorism needs. Civil liberties advocates argue the law violates constitutional privacy protections and lacks sufficient oversight. The government contends that bulk data is essential for pre-empting imminent threats and cites declining trust in existing warrant systems.\n\nShould the court uphold or strike down the law? Provide an explicit weighting of constitutional principles, security imperatives, precedent stability, and public trust. Support your reasoning with citations to legal frameworks or analogous precedents, specify measurable legal or social outcomes within five years, and analyze which constitutional balancing test (strict scrutiny, intermediate scrutiny, rational basis) applies.",
+      "metadata": {
+        "anchors": "limited_objective",
+        "tags": ["decision-critical", "interpretive_disagreement", "process_transparency"],
+        "balancing_tests": ["strict_scrutiny", "intermediate_scrutiny", "rational_basis"]
+      }
+    },
+    {
+      "id": "medical_compassionate_use",
+      "domain": "medical",
+      "complexity": "medium-high",
+      "title": "Compassionate Use of Unproven Immunotherapy",
+      "prompt": "A novel immunotherapy shows early promise for a rare autoimmune condition but lacks Phase III trials. A critically ill patient, unresponsive to standard therapies, requests the therapy. The hospital ethics board must decide whether to approve its compassionate use.\n\nConsider clinical risk, informed consent, potential precedent effects, and resource allocation. Provide evidence-backed reasoning (guidelines, studies, or analogous cases) and specify how you would monitor outcomes and adjust policy if adverse events occur. Compare analogous compassionate-use cases and institutional policies across hospital systems.",
+      "metadata": {
+        "anchors": "moderate",
+        "tags": ["decision-critical", "clinical_ethics", "moderate_disagreement"],
+        "key_considerations": ["clinical_risk", "informed_consent", "precedent_effects", "resource_allocation"]
+      }
+    },
+    {
+      "id": "infrastructure_subway_ventilation",
+      "domain": "public_health_infrastructure",
+      "complexity": "medium",
+      "title": "Subway Ventilation Upgrade Dilemma",
+      "prompt": "A metropolitan transit authority must decide whether to implement a costly overhaul of its subway ventilation system after several reports of airborne disease transmission clusters. Current data suggest a 5-20% chance that poor ventilation contributed to outbreaks, but the cost of the upgrade is $1.2-2.0 billion.\n\nAlternatives include enhanced cleaning protocols and targeted ventilation upgrades at high-traffic stations.\n\nEvaluate the options, explicitly balancing public health benefit, economic cost, system reliability, and public confidence. Provide approximate percentages or confidence intervals for infection risk reduction under each option, and include at least one qualitative consideration (e.g., public trust or political feasibility) in your final recommendation.",
+      "metadata": {
+        "anchors": "partial",
+        "tags": ["moderate_stakes", "mixed_quant_qual_reasoning", "diverse_domain"],
+        "options": ["full_system_overhaul", "enhanced_cleaning", "targeted_upgrades"],
+        "uncertainty_range": "5-20% ventilation contribution to outbreaks"
+      }
+    }
+  ]
+}
