@@ -328,10 +328,8 @@ with gr.Blocks(
 ) as demo:
     with gr.Row(elem_id="header-row"):
         with gr.Column(scale=1, min_width=100):
-            # Construct an absolute path to the logo for robust deployment
-            script_dir = os.path.dirname(__file__)
-            logo_path = os.path.join(script_dir, "logo.png")
-            gr.Image(logo_path, height=80, interactive=False, container=False)
+            # Use a simple relative path. The launch() command will make it accessible.
+            gr.Image("logo.png", height=80, interactive=False, container=False)
         with gr.Column(scale=8):
             gr.Markdown("# Discursus: A System for Critical LLM Discourse")
 
@@ -479,4 +477,10 @@ with gr.Blocks(
     )
 
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", server_port=int(os.getenv("PORT", 7860)), share=False)
+    # Allow Gradio to serve files from the current directory.
+    demo.launch(
+        server_name="0.0.0.0", 
+        server_port=int(os.getenv("PORT", 7860)), 
+        share=False,
+        allowed_paths=["."]
+    )
