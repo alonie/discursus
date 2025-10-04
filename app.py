@@ -5,6 +5,7 @@ import re
 import tiktoken
 from dotenv import load_dotenv
 import json
+import tempfile
 
 load_dotenv() # Load variables from .env file
 
@@ -366,7 +367,17 @@ with gr.Blocks(
         api_provider_switch = gr.Checkbox(label="Use OpenRouter", value=True, scale=1)
         cost_display = gr.Textbox(label="Est. Cost", value="Est. Cost: $0.0000", interactive=False, scale=1)
         token_count_display = gr.Textbox(label="Context Size", value="Context Size: 0", interactive=False, scale=1)
+        view_context_btn = gr.Button("View Context", scale=1)
         summarize_btn = gr.Button("Summarise Context", scale=1)
+
+    with gr.Column(visible=False) as context_viewer_col:
+        with gr.Row():
+            gr.Markdown("### Conversation Context")
+        with gr.Row():
+            context_display = gr.Markdown()
+        with gr.Row():
+            download_file_btn = gr.File(label="Download Full Conversation", interactive=False)
+            close_context_btn = gr.Button("Close")
 
     chatbot = gr.Chatbot(label="Conversation", height=600, type="messages")
 
@@ -428,6 +439,32 @@ with gr.Blocks(
         inputs=[example_questions_dd],
         outputs=[user_input]
     )
+
+    def handle_view_context(history: List[dict]):
+        """Formats the conversation history for viewing and downloading."""
+        if not history:
+            return "The conversation is empty.", None, gr.update(visible=True)
+
+        # Create a simple text representation for the file
+        file_content = []
+        for msg in history:
+            role = msg.get("role", "unknown").title()
+            content = msg.get("content", "")
+            # Basic cleaning of Markdown for the text file
+            content = re.sub(r'<br>### \*\*(.*?)\*\* \(.*?\)\n---\n', r'### \1 ###\n', content)
+            file_content.append(f"--- {role} ---\n{content}\n")
+        
+        full_log = "\n".join(file_content)
+
+        # Create a temporary file for downloading
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix=".txt", encoding='utf-8') as f:
+            f.write(full_log)
+            temp_filepath = f.name
+
+        # Create a more readable Markdown version for display
+        markdown_display = full_log.replace("\n", "<br>")
+
+        return markdown_display, temp_filepath, gr.update(visible=True)
 
     def handle_send(user_question, history, p_model, files, use_openrouter):
         if not user_question.strip():
@@ -512,6 +549,18 @@ with gr.Blocks(
         handle_summarize,
         [chatbot],
         [chatbot, token_count_display, cost_display]
+    )
+
+    view_context_btn.click(
+        handle_view_context,
+        [chatbot],
+        [context_display, download_file_btn, context_viewer_col]
+    )
+
+    close_context_btn.click(
+        lambda: gr.update(visible=False),
+        [],
+        [context_viewer_col]
     )
 
     reset_btn.click(
