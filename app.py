@@ -254,7 +254,8 @@ with gr.Blocks(
                 "Please provide a concise, constructive critique of the assistant's reasoning, accuracy, and helpfulness throughout the preceding conversation. "
                 "Identify any potential biases, logical fallacies, or missed opportunities for a more comprehensive response. "
                 "Be extremely critical of citations and confirm or refute each specific citation, as existing or hallucinated, and then as relevant or not. "
-                "Provide a clear assessment of each and every citation and mark each with a Status (green existing/red hallucinated) and a Relevance (red 'X', or an orange, or yellow or green). "
+                "Provide a clear assessment of each and every citation and mark each with a Status icon (green existing/red hallucinated) + explanation "
+                "and a Relevance icon (red 'X', or an orange, or yellow or green) + explanation. "
                 "On this basis, and the overall assessment of the response, provide an overall critique rating out of 10 for the response."
             )
         )
