@@ -2,6 +2,7 @@ import gradio as gr
 import os
 from typing import List, Tuple, Generator
 import re
+import tiktoken
 
 # Lazy-load API clients
 _anthropic_client = None
@@ -29,6 +30,21 @@ def get_gemini_client():
         genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
         _gemini_client = genai
     return _gemini_client
+
+# --- Token Counting Utility ---
+def count_tokens(history: List[dict]) -> int:
+    """Counts the total tokens in the conversation history."""
+    # Using cl100k_base encoder as a general-purpose choice
+    try:
+        encoding = tiktoken.get_encoding("cl100k_base")
+    except Exception:
+        return 0 # In case of issue loading encoding
+    
+    total_tokens = 0
+    for message in history:
+        if message.get("content"):
+            total_tokens += len(encoding.encode(message["content"]))
+    return total_tokens
 
 SUGGESTED_QUESTION = """A mid-sized country faces a resurgence of a novel respiratory virus. Vaccination rates have plateaued between 45-65%, ICU capacity varies between 75-95% across regions, and economic recovery remains fragile. Recent epidemiological studies suggest transmission rates may be 30-60% higher than initial models predicted. The government is considering reintroducing strict lockdowns for 4-8 weeks to suppress transmission before winter. Should it do so? Justify your position with evidence-backed analysis of epidemiological risk, economic stability, civil liberties, and public trust. Provide specific citations for key empirical claims and measurable predictions your approach would generate."""
 
@@ -147,7 +163,7 @@ def chat_turn(user_question: str, history: List[dict], primary_model: str, uploa
     """A single turn in the primary chat conversation."""
     history.append({"role": "user", "content": user_question})
     history.append({"role": "assistant", "content": ""})
-    yield history, gr.update(value="")
+    yield history, gr.update(value=""), f"Token Count: {count_tokens(history)}"
 
     messages = build_messages_with_context(user_question, history[:-2], uploaded_files)
     
@@ -157,13 +173,13 @@ def chat_turn(user_question: str, history: List[dict], primary_model: str, uploa
     for chunk in response_stream:
         full_response += chunk
         history[-1]["content"] = format_bot_message(full_response, "Response", primary_model)
-        yield history, gr.update(value="")
+        yield history, gr.update(value=""), f"Token Count: {count_tokens(history)}"
 
 def critique_and_review_workflow(history: List[dict], primary_model: str, critique_model: str, uploaded_files, critique_prompt: str, review_prompt_template: str) -> Generator:
     """The full C&R workflow, displaying all output in the main display."""
     if not history:
         history.append({"role": "assistant", "content": format_bot_message("Cannot perform critique on an empty conversation.", "Critique", "System")})
-        yield history
+        yield history, f"Token Count: {count_tokens(history)}"
         return
 
     # 1. Generate Critique
@@ -172,13 +188,13 @@ def critique_and_review_workflow(history: List[dict], primary_model: str, critiq
     # Add a dummy user message for display purposes, then the bot response
     history.append({"role": "user", "content": "Critique Request"})
     history.append({"role": "assistant", "content": format_bot_message("...", "Critique", critique_model)})
-    yield history
+    yield history, f"Token Count: {count_tokens(history)}"
 
     critique_response = ""
     for chunk in stream_model(critique_messages, critique_model):
         critique_response += chunk
         history[-1]["content"] = format_bot_message(critique_response, "Critique", critique_model)
-        yield history
+        yield history, f"Token Count: {count_tokens(history)}"
 
     # 2. Generate Revised Response
     review_prompt = f"{review_prompt_template}\n\n--- CRITIQUE ---\n{critique_response}\n--- END CRITIQUE ---"
@@ -187,13 +203,13 @@ def critique_and_review_workflow(history: List[dict], primary_model: str, critiq
     # Add another dummy user message for the revision
     history.append({"role": "user", "content": "Review Request"})
     history.append({"role": "assistant", "content": format_bot_message("...", "Revision", primary_model)})
-    yield history
+    yield history, f"Token Count: {count_tokens(history)}"
 
     revised_response = ""
     for chunk in stream_model(review_messages, primary_model):
         revised_response += chunk
         history[-1]["content"] = format_bot_message(revised_response, "Revision", primary_model)
-        yield history
+        yield history, f"Token Count: {count_tokens(history)}"
 
 
 with gr.Blocks(
@@ -210,6 +226,9 @@ with gr.Blocks(
     with gr.Row():
         primary_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Claude 4.5 Sonnet", label="Primary Model")
         critique_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Gemini 2.5 Pro", label="Critique Model")
+        with gr.Column(min_width=200):
+            summarize_btn = gr.Button("Summarise Context")
+            token_count_display = gr.Textbox(label="Token Count", value="Token Count: 0", interactive=False)
 
     chatbot = gr.Chatbot(label="Conversation", height=600, type="messages")
 
@@ -254,7 +273,7 @@ with gr.Blocks(
 
     def handle_send(user_question, history, p_model, files):
         if not user_question.strip():
-            return history, gr.update(value="")
+            return history, gr.update(value=""), f"Token Count: {count_tokens(history)}"
         yield from chat_turn(user_question, history, p_model, files)
 
     def handle_critique(history, p_model, c_model, files, critique_prompt, review_template):
@@ -265,22 +284,59 @@ with gr.Blocks(
         upload_status = f"📎 Uploaded: {', '.join(file_names)}"
         return files, gr.update(value=upload_status)
 
+    def handle_summarize(history: List[dict]) -> Generator:
+        """Summarizes the conversation history to reduce token count."""
+        if len(history) < 5: # Don't summarize very short conversations
+            yield history, f"Token Count: {count_tokens(history)}"
+            return
+
+        # Keep the first user message and the last 2 turns (4 messages)
+        first_user_message = history[0]
+        last_turns = history[-4:]
+        to_summarize = history[1:-4]
+
+        # Create the prompt for summarization
+        conversation_text = "\n".join([f"{msg['role']}: {msg['content']}" for msg in to_summarize])
+        summary_prompt = f"Please provide a concise summary of the following conversation:\n\n{conversation_text}"
+        
+        # Use a fast model for summarization
+        summary_messages = [{"role": "user", "content": summary_prompt}]
+        
+        summary_response = ""
+        # Use a fast model like GPT-4o Mini or Gemini Flash for summarization
+        summarization_model = "GPT-4o Mini" 
+        yield history, "Summarizing..." # Update UI to show activity
+        
+        for chunk in stream_model(summary_messages, summarization_model):
+            summary_response += chunk
+        
+        summary_message = {
+            "role": "assistant", 
+            "content": f"<br>### **Summary of Previous Conversation**\n---\n{summary_response}"
+        }
+
+        # Reconstruct the history
+        new_history = [first_user_message, summary_message] + last_turns
+        
+        yield new_history, f"Token Count: {count_tokens(new_history)}"
+
+
     send_btn.click(
         handle_send,
         [user_input, chatbot, primary_model, file_state],
-        [chatbot, user_input]
+        [chatbot, user_input, token_count_display]
     )
 
     user_input.submit(
         handle_send,
         [user_input, chatbot, primary_model, file_state],
-        [chatbot, user_input]
+        [chatbot, user_input, token_count_display]
     )
 
     critique_btn.click(
         handle_critique,
         [chatbot, primary_model, critique_model, file_state, critique_prompt_textbox, review_prompt_textbox],
-        [chatbot]
+        [chatbot, token_count_display]
     )
 
     upload_btn.upload(
@@ -289,10 +345,16 @@ with gr.Blocks(
         [file_state, user_input]
     )
 
+    summarize_btn.click(
+        handle_summarize,
+        [chatbot],
+        [chatbot, token_count_display]
+    )
+
     reset_btn.click(
-        lambda: ([], [], gr.update(placeholder="Enter your message or use the suggested question...", value="")),
+        lambda: ([], [], gr.update(placeholder="Enter your message or use the suggested question...", value=""), "Token Count: 0"),
         [],
-        [chatbot, file_state, user_input]
+        [chatbot, file_state, user_input, token_count_display]
     )
 
 if __name__ == "__main__":
