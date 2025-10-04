@@ -356,8 +356,9 @@ with gr.Blocks(
 ) as demo:
     with gr.Row(elem_id="header-row"):
         with gr.Column(scale=1, min_width=100):
-            # Use a simple relative path. The launch() command will make it accessible.
-            gr.Image("logo.png", height=80, interactive=False, container=False)
+            # Use the GitHub URL that correctly resolves the Git LFS object.
+            logo_url = "https://github.com/alonie/discursus/raw/main/logo.png"
+            gr.Image(logo_url, height=80, interactive=False, container=False)
         with gr.Column(scale=8):
             gr.Markdown("# Discursus: A System for Critical LLM Discourse")
 
