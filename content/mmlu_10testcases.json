@@ -1,0 +1,180 @@
+{
+  "mmlu_case_22": {
+    "title": "MMLU Question 22",
+    "domain": "biology",
+    "complexity": "mmlu_complexity",
+    "prompt": "Question: A mutation in a bacterial enzyme changed a previously polar amino acid into a nonpolar amino acid. This amino acid was located at a site distant from the enzyme\u2019s active site. How might this mutation alter the enzyme\u2019s substrate specificity?\nOptions:\nA) [By changing the enzyme\u2019s pH optimum, By changing the enzyme's molecular weight, An amino acid change away from the active site increases the enzyme's substrate specificity., By changing the shape of the protein, By changing the enzyme's temperature optimum, By altering the enzyme's ability to be denatured, By changing the enzyme\u2019s location in the cell, By changing the enzyme's color, An amino acid change away from the active site cannot alter the enzyme\u2019s substrate specificity., By altering the enzyme's rate of reaction]",
+    "source_data": {
+      "question_id": 22,
+      "question": "A mutation in a bacterial enzyme changed a previously polar amino acid into a nonpolar amino acid. This amino acid was located at a site distant from the enzyme\u2019s active site. How might this mutation alter the enzyme\u2019s substrate specificity?",
+      "options": {
+        "A": "[By changing the enzyme\u2019s pH optimum, By changing the enzyme's molecular weight, An amino acid change away from the active site increases the enzyme's substrate specificity., By changing the shape of the protein, By changing the enzyme's temperature optimum, By altering the enzyme's ability to be denatured, By changing the enzyme\u2019s location in the cell, By changing the enzyme's color, An amino acid change away from the active site cannot alter the enzyme\u2019s substrate specificity., By altering the enzyme's rate of reaction]"
+      },
+      "correct_answer": "D",
+      "category": "biology",
+      "cot_content": "A: Let's think step by step. A change in an amino acid leads to a change in the primary structure of the protein. A change in the primary structure may lead to a change in the secondary and the tertiary structure of the protein. A change in the tertiary structure means a change in the shape of the protein, so (C) has to be correct. Since the change does not affect the active site of the enzyme, we do not expect the activity of the enzyme to be affected. The answer is (D)."
+    }
+  },
+  "mmlu_case_0": {
+    "title": "MMLU Question 0",
+    "domain": "math",
+    "complexity": "mmlu_complexity",
+    "prompt": "Question: The symmetric group $S_n$ has $\n\\factorial{n}$ elements, hence it is not true that $S_{10}$ has 10 elements.\nFind the characteristic of the ring 2Z.\nOptions:\nA) 0\nB) 30\nC) 3\nD) 10\nE) 12\nF) 50\nG) 2\nH) 100\nI) 20\nJ) 5",
+    "source_data": {
+      "question_id": 0,
+      "question": "The symmetric group $S_n$ has $\n\\factorial{n}$ elements, hence it is not true that $S_{10}$ has 10 elements.\nFind the characteristic of the ring 2Z.",
+      "options": {
+        "A": 0,
+        "B": 30,
+        "C": 3,
+        "D": 10,
+        "E": 12,
+        "F": 50,
+        "G": 2,
+        "H": 100,
+        "I": 20,
+        "J": 5
+      },
+      "correct_answer": "A",
+      "category": "math",
+      "cot_content": "A: Let's think step by step. A characteristic of a ring is R is $n$ if the statement $ka = 0$ for all $a\\in 2Z$ implies that $k$ is a multiple of $n$. Assume that $ka = 0$ for all $a\\in 2Z$ for some $k$. In particular $2k = 0$. Hence $k=0$ and $n=0$. The answer is (A)."
+    }
+  },
+  "mmlu_case_49": {
+    "title": "MMLU Question 49",
+    "domain": "philosophy",
+    "complexity": "mmlu_complexity",
+    "prompt": "Question: What is the sign of the covenant for Jewish males?\nOptions:\nA) [Fasting on Yom Kippur, Lighting Shabbat candles, The rainbow, Circumcision, The Torah, Bar mitzvah, Keeping kosher, Wearing a kippah, A son, The Star of David]",
+    "source_data": {
+      "question_id": 49,
+      "question": "What is the sign of the covenant for Jewish males?",
+      "options": {
+        "A": "[Fasting on Yom Kippur, Lighting Shabbat candles, The rainbow, Circumcision, The Torah, Bar mitzvah, Keeping kosher, Wearing a kippah, A son, The Star of David]"
+      },
+      "correct_answer": "D",
+      "category": "philosophy",
+      "cot_content": "A: Let's think step by step. We refer to Wikipedia articles on world religions for help. In Judaism, the most distinctive sign of the covenant is circumcision (brit milah). The answer is (D)."
+    }
+  },
+  "mmlu_case_4": {
+    "title": "MMLU Question 4",
+    "domain": "math",
+    "complexity": "mmlu_complexity",
+    "prompt": "Question: A total of 30 players will play basketball at a park. There will be exactly 5 players on each team. Which statement correctly explains how to find the number of teams needed?\nOptions:\nA) [Multiply 5 by 5 to find 25 teams., Divide 30 by 5 to find 6 teams., Add 5 to 30 to find 35 teams., Subtract 30 from 5 to find -25 teams., Divide 5 by 30 to find 0.1667 teams., Add 5 to 30 then divide by 2 to find 17.5 teams., N/A, N/A, N/A, N/A]",
+    "source_data": {
+      "question_id": 4,
+      "question": "A total of 30 players will play basketball at a park. There will be exactly 5 players on each team. Which statement correctly explains how to find the number of teams needed?",
+      "options": {
+        "A": "[Multiply 5 by 5 to find 25 teams., Divide 30 by 5 to find 6 teams., Add 5 to 30 to find 35 teams., Subtract 30 from 5 to find -25 teams., Divide 5 by 30 to find 0.1667 teams., Add 5 to 30 then divide by 2 to find 17.5 teams., N/A, N/A, N/A, N/A]"
+      },
+      "correct_answer": "B",
+      "category": "math",
+      "cot_content": "A: Let's think step by step. We want to find the number of teams. We know that there are 5 players/team, and 30 players. Thus to get the number of teams we divide players by players/team, so 30 players / 5 players/team = 6 teams. The answer is (B)."
+    }
+  },
+  "mmlu_case_54": {
+    "title": "MMLU Question 54",
+    "domain": "other",
+    "complexity": "mmlu_complexity",
+    "prompt": "Question: What place is named in the title of the 1979 live album by rock legends Cheap Trick?\nOptions:\nA) [Brooklyn, Beijing, Budapest, Boston, Bhutan, Barcelona, Britain, Brisbane, Bruges, Budokan]",
+    "source_data": {
+      "question_id": 54,
+      "question": "What place is named in the title of the 1979 live album by rock legends Cheap Trick?",
+      "options": {
+        "A": "[Brooklyn, Beijing, Budapest, Boston, Bhutan, Barcelona, Britain, Brisbane, Bruges, Budokan]"
+      },
+      "correct_answer": "J",
+      "category": "other",
+      "cot_content": "A: Let's think step by step. We refer to Wikipedia for help. Nippon Budokan is an indoor arena in Tokyo, Japan renowned for hosting rock music concerts including Cheap Trick in 1978. 'Cheap Trick at Budokan' became the name of their album. The answer is (J)."
+    }
+  },
+  "mmlu_case_18": {
+    "title": "MMLU Question 18",
+    "domain": "business",
+    "complexity": "mmlu_complexity",
+    "prompt": "Question: Although the content and quality can be as controlled as direct mail, response rates of this medium are lower because of the lack of a personal address mechanism. This media format is known as:\nOptions:\nA) [Online banners., Television advertising., Email marketing., Care lines., Direct mail., Inserts., Door to door., Radio advertising., Billboards., Social media advertising.]",
+    "source_data": {
+      "question_id": 18,
+      "question": "Although the content and quality can be as controlled as direct mail, response rates of this medium are lower because of the lack of a personal address mechanism. This media format is known as:",
+      "options": {
+        "A": "[Online banners., Television advertising., Email marketing., Care lines., Direct mail., Inserts., Door to door., Radio advertising., Billboards., Social media advertising.]"
+      },
+      "correct_answer": "G",
+      "category": "business",
+      "cot_content": "A: Let's think step by step. We refer to Wikipedia articles on marketing for help. Door to door marketing delivers non-addressed items within all buildings within a geographic area. While it can control the content and quality as well as direct mail marketing, its response rate is lower because of the lack of a personal address mechanism. The answer is (G)."
+    }
+  },
+  "mmlu_case_10": {
+    "title": "MMLU Question 10",
+    "domain": "physics",
+    "complexity": "mmlu_complexity",
+    "prompt": "Question: Say the pupil of your eye has a diameter of 5 mm and you have a telescope with an aperture of 50 cm. How much more light can the telescope gather than your eye?\nOptions:\nA) [1000 times more, 50 times more, 5000 times more, 500 times more, 10000 times more, 20000 times more, 2000 times more, 100 times more, 10 times more, N/A]",
+    "source_data": {
+      "question_id": 10,
+      "question": "Say the pupil of your eye has a diameter of 5 mm and you have a telescope with an aperture of 50 cm. How much more light can the telescope gather than your eye?",
+      "options": {
+        "A": "[1000 times more, 50 times more, 5000 times more, 500 times more, 10000 times more, 20000 times more, 2000 times more, 100 times more, 10 times more, N/A]"
+      },
+      "correct_answer": "E",
+      "category": "physics",
+      "cot_content": "A: Let's think step by step. The amount of light is proportional to the aperture area $A = \\pi D^2/4$ for a lens with diameter $D$, so the relative amounts of light between the eye with diameter 5mm and the telescope with diameter 50mm is $(50 cm)^2/(5mm)^2 = 10000$. The answer is (E)."
+    }
+  },
+  "mmlu_case_33": {
+    "title": "MMLU Question 33",
+    "domain": "computer science",
+    "complexity": "mmlu_complexity",
+    "prompt": "Question: _____________ can modify data on your system \u2013 so that your system doesn\u2019t run correctly or you can no longer access specific data, or it may even ask for ransom in order to give your access.\nOptions:\nA) [Email Trojans, Backdoor Trojans, Rootkit Trojans, Banking Trojans, Trojan-Downloader, Spyware Trojans, Network Trojans, Worm Trojans, Ransom Trojan, IM \u2013 Trojans]",
+    "source_data": {
+      "question_id": 33,
+      "question": "_____________ can modify data on your system \u2013 so that your system doesn\u2019t run correctly or you can no longer access specific data, or it may even ask for ransom in order to give your access.",
+      "options": {
+        "A": "[Email Trojans, Backdoor Trojans, Rootkit Trojans, Banking Trojans, Trojan-Downloader, Spyware Trojans, Network Trojans, Worm Trojans, Ransom Trojan, IM \u2013 Trojans]"
+      },
+      "correct_answer": "I",
+      "category": "computer science",
+      "cot_content": "A: Let's think step by step. The system is asking for trojans, which are for ransom, which means ransom trojan. The answer is (I)."
+    }
+  },
+  "mmlu_case_45": {
+    "title": "MMLU Question 45",
+    "domain": "philosophy",
+    "complexity": "mmlu_complexity",
+    "prompt": "Question: Which of the given formulas of PL is the best symbolization of the following sentence?\nTurtles live long lives and are happy creatures, unless they are injured.\nOptions:\nA) [(L \u2022 H) \u2261 I, (L \u2022 H) \u2228 I, L \u2022 (H \u2228 I), L \u2022 (H \u2283 R)., N/A, N/A, N/A, N/A, N/A, N/A]",
+    "source_data": {
+      "question_id": 45,
+      "question": "Which of the given formulas of PL is the best symbolization of the following sentence?\nTurtles live long lives and are happy creatures, unless they are injured.",
+      "options": {
+        "A": "[(L \u2022 H) \u2261 I, (L \u2022 H) \u2228 I, L \u2022 (H \u2228 I), L \u2022 (H \u2283 R)., N/A, N/A, N/A, N/A, N/A, N/A]"
+      },
+      "correct_answer": "B",
+      "category": "philosophy",
+      "cot_content": "A: Let's think step by step. We refer to Wikipedia articles on formal logic for help. Let\u2019s solve this step by step. Let \u201cL\u201d denote \u201cliving long\u201d, H \u201cbeing happy\u201d, and \u201cI\u201d \u201cbeing injured\u201d. Now, consider each choice:\n(A) means (living long AND being happy) is equivalent to (being injured). \n(B) means (living long AND being happy) OR (being injured). \n(C) means (living long) AND (being happy OR being injured). \n(D) means (living long) AND (being happy implies being R), but what R denotes is not clear.\nObviously, (B) is the best symbolization of the original sentence. The answer is (B)."
+    }
+  },
+  "mmlu_case_12": {
+    "title": "MMLU Question 12",
+    "domain": "physics",
+    "complexity": "mmlu_complexity",
+    "prompt": "Question: A refracting telescope consists of two converging lenses separated by 100 cm. The eye-piece lens has a focal length of 20 cm. The angular magnification of the telescope is\nOptions:\nA) 10\nB) 40\nC) 6\nD) 25\nE) 15\nF) 50\nG) 30\nH) 4\nI) 5\nJ) 20",
+    "source_data": {
+      "question_id": 12,
+      "question": "A refracting telescope consists of two converging lenses separated by 100 cm. The eye-piece lens has a focal length of 20 cm. The angular magnification of the telescope is",
+      "options": {
+        "A": 10,
+        "B": 40,
+        "C": 6,
+        "D": 25,
+        "E": 15,
+        "F": 50,
+        "G": 30,
+        "H": 4,
+        "I": 5,
+        "J": 20
+      },
+      "correct_answer": "H",
+      "category": "physics",
+      "cot_content": "A: Let's think step by step. In a refracting telescope, if both lenses are converging, the focus of both lenses must be between the two lenses, and thus the focal lengths of the two lenses must add up to their separation. Since the focal length of one lens is 20 cm, the focal length of the other must be 80 cm. The magnification is the ratio of these two focal lengths, or 4. The answer is (H)."
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "oneOf": [
+    {
+      "type": "array",
+      "description": "A list of test case objects (array form)",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/testCaseObject" }
+    },
+    {
+      "type": "object",
+      "description": "A dictionary of test case objects keyed by case name",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/testCaseObject" }
+    }
+  ],
+  "$defs": {
+    "testCaseObject": {
+      "type": "object",
+      "description": "Represents a single test case",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Unique identifier for the test case (must match key when using dictionary form)"
+        },
+        "title": { "type": "string" },
+        "domain": { "type": "string" },
+        "complexity": { "type": "string" },
+        "prompt": { "type": "string" },
+        "metadata": {
+          "type": "object",
+          "description": "Optional metadata or scoring info",
+          "additionalProperties": true
+        },
+        "source_data": {
+          "type": "object",
+          "description": "Optional full source details for benchmark problems (e.g., MMLU options, answers)",
+          "additionalProperties": true
+        }
+      },
+      "required": ["title", "domain", "complexity", "prompt"],
+      "additionalProperties": true
+    }
+  }
+}
