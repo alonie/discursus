@@ -328,7 +328,10 @@ with gr.Blocks(
 ) as demo:
     with gr.Row(elem_id="header-row"):
         with gr.Column(scale=1, min_width=100):
-            gr.Image("logo.png", height=80, interactive=False, container=False)
+            # Construct an absolute path to the logo for robust deployment
+            script_dir = os.path.dirname(__file__)
+            logo_path = os.path.join(script_dir, "logo.png")
+            gr.Image(logo_path, height=80, interactive=False, container=False)
         with gr.Column(scale=8):
             gr.Markdown("# Discursus: A System for Critical LLM Discourse")
 
