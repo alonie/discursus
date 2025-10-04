@@ -33,7 +33,9 @@ def get_gemini_client():
 SUGGESTED_QUESTION = """A mid-sized country faces a resurgence of a novel respiratory virus. Vaccination rates have plateaued between 45-65%, ICU capacity varies between 75-95% across regions, and economic recovery remains fragile. Recent epidemiological studies suggest transmission rates may be 30-60% higher than initial models predicted. The government is considering reintroducing strict lockdowns for 4-8 weeks to suppress transmission before winter. Should it do so? Justify your position with evidence-backed analysis of epidemiological risk, economic stability, civil liberties, and public trust. Provide specific citations for key empirical claims and measurable predictions your approach would generate."""
 
 MODEL_MAP = {
-    "Claude 4.5 Sonnet": ("anthropic", "claude-sonnet-4-20250514"),
+    "Claude 4.5 Sonnet": ("anthropic", "claude-sonnet-4-5"),
+    "Claude 4 Sonnet": ("anthropic", "claude-4-sonnet-20250115"),
+    "Claude 3.5 Sonnet": ("anthropic", "claude-3-5-sonnet-20240620"),
     "GPT-4o": ("openai", "gpt-4o"),
     "GPT-4o Mini": ("openai", "gpt-4o-mini"),
     "Gemini 2.5 Flash": ("gemini", "gemini-2.5-flash"),
@@ -194,9 +196,17 @@ def critique_and_review_workflow(history: List[dict], primary_model: str, critiq
         yield history
 
 
-with gr.Blocks(title="Discursus", theme=gr.themes.Default()) as demo:
-    gr.Image("logo.png", height=100, interactive=False, container=False)
-    gr.Markdown("# Discursus: A System for Critical LLM Discourse")
+with gr.Blocks(
+    title="Discursus", 
+    theme=gr.themes.Default(),
+    css="#header-row {align-items: center;}"
+) as demo:
+    with gr.Row(elem_id="header-row"):
+        with gr.Column(scale=1, min_width=100):
+            gr.Image("logo.png", height=80, interactive=False, container=False)
+        with gr.Column(scale=8):
+            gr.Markdown("# Discursus: A System for Critical LLM Discourse")
+
     with gr.Row():
         primary_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Claude 4.5 Sonnet", label="Primary Model")
         critique_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Gemini 2.5 Pro", label="Critique Model")
@@ -208,16 +218,20 @@ with gr.Blocks(title="Discursus", theme=gr.themes.Default()) as demo:
             user_input = gr.Textbox(show_label=False, placeholder="Enter your message or use the suggested question...", lines=3, value=SUGGESTED_QUESTION)
         with gr.Column(scale=1, min_width=80):
             send_btn = gr.Button("Send", variant="primary")
+        with gr.Column(scale=1, min_width=120):
+             upload_btn = gr.UploadButton("📎 Upload Files", file_count="multiple", file_types=["text", ".md", ".py", ".csv", ".json"])
 
-    with gr.Accordion("Advanced Options", open=False):
-        with gr.Row():
-            critique_btn = gr.Button("Critique & Review")
-            reset_btn = gr.Button("🔄 New Conversation")
-            upload_btn = gr.UploadButton("📎 Upload Files", file_count="multiple", file_types=["text", ".md", ".py", ".csv", ".json"])
-        
+
+    gr.Markdown("---")
+    gr.Markdown("### Critique & Review Workflow")
+    
+    with gr.Row():
+        critique_btn = gr.Button("Critique & Review", variant="secondary")
+
+    with gr.Row():
         critique_prompt_textbox = gr.Textbox(
             label="Critique Prompt",
-            lines=3,
+            lines=5,
             value=(
                 "Please provide a concise, constructive critique of the assistant's reasoning, accuracy, and helpfulness throughout the preceding conversation. "
                 "Identify any potential biases, logical fallacies, or missed opportunities for a more comprehensive response. "
@@ -228,10 +242,12 @@ with gr.Blocks(title="Discursus", theme=gr.themes.Default()) as demo:
         )
         review_prompt_textbox = gr.Textbox(
             label="Review Prompt Template",
-            lines=3,
+            lines=5,
             value="Based on the entire conversation history and the following critique, please provide a revised, improved version of your last response. " \
             "Synthesize the critique into your reasoning and address any shortcomings identified."
         )
+
+    reset_btn = gr.Button("🔄 New Conversation")
 
 
     file_state = gr.State([])
@@ -280,4 +296,4 @@ with gr.Blocks(title="Discursus", theme=gr.themes.Default()) as demo:
     )
 
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", share=False)
+    demo.launch(server_name="0.0.0.0", server_port=int(os.getenv("PORT", 7860)), share=False)
