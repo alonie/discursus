@@ -2,6 +2,7 @@ import gradio as gr
 import os
 import html as _html
 from typing import List, Tuple, Generator
+import re
 
 # Lazy-load API clients
 _anthropic_client = None
@@ -59,12 +60,68 @@ def process_uploaded_files(files) -> str:
     
     return "\n".join(file_contents)
 
-def build_prompt_with_context(user_prompt: str, uploaded_files) -> str:
-    """Combine user prompt with file context"""
+def build_messages_with_context(user_prompt: str, history: List[Tuple[str, str]], uploaded_files) -> List[dict]:
+    """Combine user prompt with history and file context into a message list."""
+    messages = []
     file_context = process_uploaded_files(uploaded_files)
     if file_context:
-        return f"UPLOADED FILES FOR REFERENCE:\n{file_context}\nUSER QUESTION:\n{user_prompt}"
-    return user_prompt
+        messages.append({"role": "user", "content": f"Please use the following files as context for the entire conversation:\n{file_context}\n(This is a system-level instruction and should not be repeated in your response.)"})
+        messages.append({"role": "assistant", "content": "Understood. I will use the provided files as context."})
+
+    for user_msg, assistant_msg_html in history:
+        if user_msg and str(user_msg).strip():
+            messages.append({"role": "user", "content": user_msg})
+        if assistant_msg_html and str(assistant_msg_html).strip():
+            # Clean the HTML formatting before sending to the model
+            content_part = re.search(r"<div class='response-content'.*?>(.*)</div>", assistant_msg_html, re.DOTALL)
+            if content_part:
+                cleaned_msg = content_part.group(1).replace('<br>', '\n').strip()
+                messages.append({"role": "assistant", "content": cleaned_msg})
+
+    messages.append({"role": "user", "content": user_prompt})
+    return messages
+
+def generate_styled_block(content: str, purpose: str, model_name: str = "") -> str:
+    """Generates a styled HTML block for a message."""
+    escaped_content = _html.escape(content).replace('\n', '<br>')
+
+    if purpose == "User":
+        return f"<div style='padding: 10px; border-radius: 10px; background-color: #e1f5fe; margin: 10px 40px 10px 5px; text-align: left; border: 1px solid #b3e5fc;'><b>You:</b><br>{escaped_content}</div>"
+
+    style_map = {
+        "Response": "background-color: #f9f9f9; border: 1px solid #ddd;",
+        "Critique": "background-color: #fffbe6; border: 1px solid #fff1b8;",
+        "Revision": "background-color: #e6ffed; border: 1px solid #b3ffc6;"
+    }
+    purpose_map = {
+        "Response": "Primary Response",
+        "Critique": "Critique",
+        "Revision": "Revised Response"
+    }
+    
+    block_style = style_map.get(purpose, style_map["Response"])
+    block_purpose = purpose_map.get(purpose, purpose)
+    
+    return f"""
+    <div style='{block_style} padding: 15px; border-radius: 8px; margin: 10px 5px 10px 40px;'>
+        <div style='font-size: 1.1em; font-weight: bold; color: #333; margin-bottom: 8px;'>
+            {block_purpose} ({model_name})
+        </div>
+        <div class='response-content' style='color: #222; line-height: 1.6;'>
+            {escaped_content}
+        </div>
+    </div>
+    """
+
+def history_to_html(history: List[Tuple[str, str]]) -> str:
+    """Converts conversation history to a single HTML string."""
+    html_string = ""
+    for user_msg, assistant_msg in history:
+        if user_msg:
+            html_string += generate_styled_block(user_msg, "User")
+        if assistant_msg:
+            html_string += assistant_msg
+    return html_string
 
 def stream_model(messages: List[dict], model_name: str) -> Generator[str, None, str]:
     """Stream from any model, handling different providers."""
@@ -116,129 +173,137 @@ def stream_model(messages: List[dict], model_name: str) -> Generator[str, None, 
                     continue
         yield from _stream_logic(gemini_streamer())
 
-def critique_and_review(user_question: str, primary_model: str, critique_model: str, history: List[Tuple[str, str]], uploaded_files) -> Generator[Tuple[List[Tuple[str, str]], str, str, gr.update, gr.update], None, None]:
-    """Execute a full Critique-and-Review cycle."""
-    complete_prompt = build_prompt_with_context(user_question, uploaded_files)
+def chat_turn(user_question: str, history: List[Tuple[str, str]], primary_model: str, uploaded_files) -> Generator:
+    """A single turn in the primary chat conversation."""
+    history.append((user_question, None))
+    yield history_to_html(history), gr.update(value="")
+
+    messages = build_messages_with_context(user_question, history[:-1], uploaded_files)
     
-    messages = []
-    for user_msg, assistant_msg in history:
-        if user_msg and str(user_msg).strip():
-            messages.append({"role": "user", "content": user_msg})
-        if assistant_msg and str(assistant_msg).strip():
-            messages.append({"role": "assistant", "content": assistant_msg})
-    messages.append({"role": "user", "content": complete_prompt})
-
-    response_type = "Initial Response" if not history else "Follow-up Response"
-    primary_output = f"### 🤖 {response_type}\n**Model:** {primary_model}\n\n"
-    critique_output = ""
-    yield history, primary_output, critique_output, gr.update(), gr.update()
-
-    primary_response = ""
-    for chunk in stream_model(messages, primary_model):
-        primary_response += chunk
-        yield history, primary_output + primary_response, critique_output, gr.update(), gr.update()
-
-    critique_output = f"### 🔍 Critique\n**Model:** {critique_model}\n\n"
-    yield history, primary_output + primary_response, critique_output, gr.update(), gr.update()
+    response_stream = stream_model(messages, primary_model)
     
-    critique_context = messages + [{"role": "assistant", "content": primary_response}]
+    full_response = ""
+    for chunk in response_stream:
+        full_response += chunk
+        history[-1] = (user_question, generate_styled_block(full_response, "Response", primary_model))
+        yield history_to_html(history), gr.update(value="")
+
+def critique_and_review_workflow(history: List[Tuple[str, str]], primary_model: str, critique_model: str, uploaded_files) -> Generator:
+    """The full C&R workflow, displaying all output in the main display."""
+    if not history:
+        history.append((None, generate_styled_block("Cannot perform critique on an empty conversation.", "Critique", "System")))
+        yield history_to_html(history)
+        return
+
+    # 1. Generate Critique
+    critique_prompt = "Please provide a concise, constructive critique of the assistant's reasoning, accuracy, and helpfulness throughout the preceding conversation. Identify any potential biases, logical fallacies, or missed opportunities for a more comprehensive response."
+    critique_messages = build_messages_with_context(critique_prompt, history, uploaded_files)
+    
+    history.append((None, generate_styled_block("...", "Critique", critique_model)))
+    yield history_to_html(history)
+
     critique_response = ""
-    for chunk in stream_model(critique_context, critique_model):
+    for chunk in stream_model(critique_messages, critique_model):
         critique_response += chunk
-        yield history, primary_output + primary_response, critique_output + critique_response, gr.update(), gr.update()
+        history[-1] = (None, generate_styled_block(critique_response, "Critique", critique_model))
+        yield history_to_html(history)
 
-    primary_output += primary_response + "\n\n---\n\n> ### ✨ Revised Response\n> **Model:** " + primary_model + "\n\n"
-    yield history, primary_output, critique_output + critique_response, gr.update(), gr.update()
-    
-    review_context = critique_context + [{"role": "user", "content": critique_response}]
-    final_response = ""
-    for chunk in stream_model(review_context, primary_model):
-        final_response += chunk
-        indented_chunk = "> " + chunk.replace("\n", "\n> ")
-        yield history, primary_output + indented_chunk, critique_output + critique_response, gr.update(), gr.update()
+    # 2. Generate Revised Response
+    review_prompt = f"Based on the entire conversation history and the following critique, please provide a revised, improved version of your last response. Synthesize the critique into your reasoning and address any shortcomings identified.\n\n--- CRITIQUE ---\n{critique_response}\n--- END CRITIQUE ---"
+    review_messages = build_messages_with_context(review_prompt, history, uploaded_files)
 
-    updated_history = history + [(user_question, final_response)]
-    
-    yield updated_history, primary_output, critique_output + critique_response, gr.update(value="", placeholder="Enter a follow-up question..."), gr.update(value=None)
+    history.append((None, generate_styled_block("...", "Revision", primary_model)))
+    yield history_to_html(history)
 
-def single_reply(user_question: str, primary_model: str, history: List[Tuple[str, str]], uploaded_files) -> Generator[Tuple[List[Tuple[str, str]], str, str, gr.update, gr.update], None, None]:
-    """Produce a single-model reply."""
-    complete_prompt = build_prompt_with_context(user_question, uploaded_files)
-    
-    messages = []
-    for user_msg, assistant_msg in history:
-        if user_msg and str(user_msg).strip():
-            messages.append({"role": "user", "content": user_msg})
-        if assistant_msg and str(assistant_msg).strip():
-            messages.append({"role": "assistant", "content": assistant_msg})
-    messages.append({"role": "user", "content": complete_prompt})
+    revised_response = ""
+    for chunk in stream_model(review_messages, primary_model):
+        revised_response += chunk
+        history[-1] = (None, generate_styled_block(revised_response, "Revision", primary_model))
+        yield history_to_html(history)
 
-    response_type = "Single Reply" if not history else "Follow-up Single Reply"
-    primary_output = f"### 🤖 {response_type}\n**Model:** {primary_model}\n\n"
-    critique_output = ""
-    yield history, primary_output, critique_output, gr.update(), gr.update()
 
-    primary_response = ""
-    for chunk in stream_model(messages, primary_model):
-        primary_response += chunk
-        yield history, primary_output + primary_response, critique_output, gr.update(), gr.update()
-
-    updated_history = history + [(user_question, primary_response)]
-    
-    yield updated_history, primary_output + primary_response, critique_output, gr.update(value="", placeholder="Enter a follow-up question..."), gr.update(value=None)
-
-with gr.Blocks(title="Discursus: Critique-and-Review", theme=gr.themes.Soft()) as demo:
-    gr.Markdown("# 🎭 Discursus: Critique-and-Review System")
+with gr.Blocks(title="Discursus", theme=gr.themes.Default(), css="#conversation-container { height: 600px; overflow-y: auto; }") as demo:
+    gr.Markdown("# Discursus: A System for Critical LLM Discourse")
     
     with gr.Row():
-        primary_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Claude 4.5 Sonnet", label="🤖 Primary Model", scale=1)
-        critique_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Gemini 2.5 Pro", label="🔍 Critique Model", scale=1)
+        primary_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Claude 4.5 Sonnet", label="Primary Model")
+        critique_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Gemini 2.5 Pro", label="Critique Model")
 
-    with gr.Row():
-        with gr.Column(scale=4):
-            user_input = gr.Textbox(lines=4, value=SUGGESTED_QUESTION, label="Question", placeholder="Enter your question or modify the suggested one...")
-        with gr.Column(scale=1):
-            with gr.Row():
-                cr_btn = gr.Button("🚀 C&R", variant="primary")
-                single_btn = gr.Button("💬 Single",)
-                reset_btn = gr.Button("🔄 Reset")
-                upload_btn = gr.UploadButton("📎", file_count="multiple", file_types=["text", ".md", ".py", ".csv", ".json"])
-            file_status = gr.Textbox(label="Uploaded Files", interactive=False, placeholder="No files uploaded")
-
-    with gr.Row():
-        primary_output = gr.Textbox(label="Primary Model", lines=30, max_lines=30, autoscroll=True, interactive=False, show_copy_button=True)
-        critique_output = gr.Textbox(label="Critique Model", lines=30, max_lines=30, autoscroll=True, interactive=False, show_copy_button=True)
+    with gr.Column(elem_id="conversation-container"):
+        conversation_display = gr.Markdown()
     
-    conversation_state = gr.State([])
+    with gr.Row():
+        with gr.Column(scale=10):
+            user_input = gr.Textbox(show_label=False, placeholder="Enter your message or use the suggested question...", lines=3, value=SUGGESTED_QUESTION)
+        with gr.Column(scale=1, min_width=80):
+            send_btn = gr.Button("Send", variant="primary")
+
+    with gr.Row():
+        critique_btn = gr.Button("🔍 Initiate Critique & Review")
+        upload_btn = gr.UploadButton("📎 Upload Files", file_count="multiple", file_types=["text", ".md", ".py", ".csv", ".json"])
+        reset_btn = gr.Button("🔄 New Conversation")
+
+    history_state = gr.State([])
     file_state = gr.State([])
 
-    def handle_cr_click(user_question, p_model, c_model, history, files):
-        if not user_question.strip(): 
-            yield history, "", "", gr.update(), gr.update()
-            return
-        for result in critique_and_review(user_question, p_model, c_model, history, files):
-            yield result
+    def handle_send(user_question, history, p_model, files):
+        if not user_question.strip():
+            return history_to_html(history), gr.update(value="")
+        for html_output, user_input_update in chat_turn(user_question, history, p_model, files):
+            yield html_output, user_input_update
 
-    def handle_single_click(user_question, p_model, history, files):
-        if not user_question.strip(): 
-            yield history, "", "", gr.update(), gr.update()
-            return
-        for result in single_reply(user_question, p_model, history, files):
-            yield result
+    def handle_critique(history, p_model, c_model, files):
+        for html_output in critique_and_review_workflow(history, p_model, c_model, files):
+            yield html_output
 
-    def handle_reset():
-        return [], "", "", SUGGESTED_QUESTION, None, "No files uploaded"
+    def handle_upload(files):
+        file_names = [os.path.basename(f.name) for f in files]
+        upload_status = f"📎 Uploaded: {', '.join(file_names)}"
+        return files, gr.update(value=upload_status)
 
-    def update_file_status(files):
-        if not files:
-            return "No files uploaded"
-        return "\n".join([os.path.basename(f.name) for f in files])
+    autoscroll_js = """
+    () => {
+        const container = document.querySelector('#conversation-container');
+        if (container) {
+            const observer = new MutationObserver(() => {
+                container.scrollTop = container.scrollHeight;
+            });
+            observer.observe(container, { childList: true, subtree: true });
+        }
+    }
+    """
 
-    upload_btn.upload(update_file_status, upload_btn, file_status)
+    send_btn.click(
+        handle_send,
+        [user_input, history_state, primary_model, file_state],
+        [conversation_display, user_input]
+    )
+
+    user_input.submit(
+        handle_send,
+        [user_input, history_state, primary_model, file_state],
+        [conversation_display, user_input]
+    )
     
-    cr_btn.click(handle_cr_click, [user_input, primary_model, critique_model, conversation_state, upload_btn], [conversation_state, primary_output, critique_output, user_input, file_state])
-    single_btn.click(handle_single_click, [user_input, primary_model, conversation_state, upload_btn], [conversation_state, primary_output, critique_output, user_input, file_state])
-    reset_btn.click(handle_reset, outputs=[conversation_state, primary_output, critique_output, user_input, file_state, file_status])
+    critique_btn.click(
+        handle_critique,
+        [history_state, primary_model, critique_model, file_state],
+        [conversation_display]
+    )
+
+    upload_btn.upload(
+        handle_upload,
+        [upload_btn],
+        [file_state, user_input]
+    )
+
+    reset_btn.click(
+        lambda: ([], [], "", gr.update(placeholder="Enter your message or use the suggested question...", value="")),
+        [],
+        [history_state, file_state, conversation_display, user_input]
+    )
+
+    demo.load(None, None, None, js=autoscroll_js)
 
 if __name__ == "__main__":
     demo.launch(server_name="0.0.0.0", server_port=int(os.getenv("PORT", 7860)), share=False)
