@@ -10,12 +10,39 @@ import time
 
 load_dotenv() # Load variables from .env file
 
+def _badge_html(label: str, value: str) -> str:
+    """Render the full HTML used by the token/cost badges so handlers can return it intact."""
+    return (
+        "<div style='text-align:center;'>"
+        f"<div style='font-size:11px;color:#666;margin-bottom:4px;'>{label}</div>"
+        f"<div class='badge'>{value}</div>"
+        "</div>"
+    )
+
 # --- Persistence config ---
 PERSIST_PATH = os.path.join(os.path.dirname(__file__), "data", "conversation.json")
+AUTOSAVE_FLAG_FILE = os.path.join(os.path.dirname(__file__), "data", "autosave_flag.txt")
 
 def _ensure_data_dir():
     d = os.path.dirname(PERSIST_PATH)
     os.makedirs(d, exist_ok=True)
+
+def set_autosave_flag(value: bool):
+    try:
+        _ensure_data_dir()
+        with open(AUTOSAVE_FLAG_FILE, "w", encoding="utf-8") as f:
+            f.write("1" if value else "0")
+    except Exception:
+        pass
+
+def read_autosave_flag() -> bool:
+    try:
+        if os.path.exists(AUTOSAVE_FLAG_FILE):
+            with open(AUTOSAVE_FLAG_FILE, "r", encoding="utf-8") as f:
+                return f.read().strip() == "1"
+    except Exception:
+        pass
+    return False
 
 def save_conversation(history: List[dict]):
     """Save conversation history to disk (best-effort). Only store serialisable parts."""
@@ -35,6 +62,16 @@ def save_conversation(history: List[dict]):
             if not os.path.exists(LAST_SESSION_FILE):
                 ts_name = time.strftime("session-%A-%d-%B-%Y_%H-%M-%S", time.localtime())
                 save_session(ts_name, history)
+        except Exception:
+            pass
+
+        # If autosave flag set, also persist into last named session
+        try:
+            if read_autosave_flag() and os.path.exists(LAST_SESSION_FILE):
+                with open(LAST_SESSION_FILE, "r", encoding="utf-8") as lf:
+                    last_name = lf.read().strip()
+                if last_name:
+                    save_session(last_name, history)
         except Exception:
             pass
 
@@ -382,7 +419,7 @@ def chat_turn(user_question: str, history: List[dict], primary_model: str, uploa
     save_conversation(history)
 
     tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
-    yield history, gr.update(value=""), f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}"
+    yield history, gr.update(value=""), _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
 
     # Provide immediate feedback for non-streaming models
     model_info = MODEL_MAP[primary_model]
@@ -390,7 +427,7 @@ def chat_turn(user_question: str, history: List[dict], primary_model: str, uploa
         wait_message = f"Generating response with {primary_model} (non-streaming). This may take a moment..."
         history[-1]["content"] = format_bot_message(wait_message, "Response", primary_model)
         save_conversation(history)
-        yield history, gr.update(value=""), f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}"
+        yield history, gr.update(value=""), _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
 
     messages = build_messages_with_context(user_question, history[:-2], uploaded_files)
     
@@ -403,7 +440,7 @@ def chat_turn(user_question: str, history: List[dict], primary_model: str, uploa
         # persist after each chunk so reload shows progress
         save_conversation(history)
         tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
-        yield history, gr.update(value=""), f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}"
+        yield history, gr.update(value=""), _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
 
 def handle_critique(history: List[dict], critique_model: str, uploaded_files, critique_prompt: str, use_openrouter: bool) -> Generator:
     """Generates a critique of the conversation."""
@@ -411,7 +448,7 @@ def handle_critique(history: List[dict], critique_model: str, uploaded_files, cr
         history.append({"role": "assistant", "content": format_bot_message("Cannot perform critique on an empty conversation.", "Critique", "System")})
         save_conversation(history)
         tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
-        yield history, f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}", ""
+        yield history, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}"), ""
         return
 
     critique_messages = build_messages_with_context(critique_prompt, history, uploaded_files)
@@ -420,7 +457,7 @@ def handle_critique(history: List[dict], critique_model: str, uploaded_files, cr
     history.append({"role": "assistant", "content": format_bot_message("...", "Critique", critique_model)})
     save_conversation(history)
     tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
-    yield history, f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}", ""
+    yield history, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}"), ""
 
     # streaming loop persists as it progresses
     critique_response = ""
@@ -429,15 +466,29 @@ def handle_critique(history: List[dict], critique_model: str, uploaded_files, cr
         history[-1]["content"] = format_bot_message(critique_response, "Critique", critique_model)
         save_conversation(history)
         tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
-        yield history, f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}", critique_response
+        yield history, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}"), critique_response
 
 def handle_review(history: List[dict], primary_model: str, uploaded_files, review_prompt_template: str, last_critique: str, use_openrouter: bool) -> Generator:
     """Generates a revised response based on the last critique."""
+    # If no explicit last_critique provided, try to extract the most recent critique from history.
+    if not last_critique:
+        for msg in reversed(history):
+            if msg.get("role") == "assistant":
+                content = msg.get("content", "")
+                # Look for the Critique header rendered by format_bot_message or plain text "Critique"
+                if "Critique" in content:
+                    # Remove the header block if present (handles HTML and plain markdown forms)
+                    cleaned = re.sub(r'(?s)<br>### \*\*Critique\*\*.*?---\n', '', content)
+                    cleaned = re.sub(r'(?s)### \*\*Critique\*\*.*?---\n', '', cleaned)
+                    cleaned = re.sub(r'(?s)Critique[:\n-]+', '', cleaned)
+                    last_critique = cleaned.strip()
+                    break
+
     if not last_critique:
         history.append({"role": "assistant", "content": format_bot_message("A critique must be generated before a revision can be made.", "Revision", "System")})
         save_conversation(history)
         tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
-        yield history, f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}"
+        yield history, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
         return
 
     review_prompt = f"{review_prompt_template}\n\n--- CRITIQUE ---\n{last_critique}\n--- END CRITIQUE ---"
@@ -447,7 +498,7 @@ def handle_review(history: List[dict], primary_model: str, uploaded_files, revie
     history.append({"role": "assistant", "content": format_bot_message("...", "Revision", primary_model)})
     save_conversation(history)
     tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
-    yield history, f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}"
+    yield history, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
 
     revised_response = ""
     for chunk in stream_model(review_messages, primary_model, use_openrouter):
@@ -455,7 +506,7 @@ def handle_review(history: List[dict], primary_model: str, uploaded_files, revie
         history[-1]["content"] = format_bot_message(revised_response, "Revision", primary_model)
         save_conversation(history)
         tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
-        yield history, f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}"
+        yield history, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
 
 
 # Human-readable default prompt (edit as you prefer)
@@ -466,23 +517,62 @@ POLYCOMB_PROMPT = (
 )
 
 with gr.Blocks(
-    title="Discursus", 
+    title="Discursus",
     theme=gr.themes.Default(),
-    css="#header-row {align-items: center;}"
-) as demo:
-    # Header: logo + title, with cost/token kept visible outside the Advanced accordion
-    with gr.Row(elem_id="header-row"):
-        with gr.Column(scale=1, min_width=100):
-            # Use the GitHub URL that correctly resolves the Git LFS object.
-            logo_url = "https://github.com/alonie/discursus/raw/main/logo.png"
-            gr.Image(logo_url, height=80, interactive=False, container=False)
-        with gr.Column(scale=8):
-            gr.Markdown("# Discursus: A System for Critical LLM Discourse")
-        # Keep these visible (not inside Advanced)
-        with gr.Column(scale=3, min_width=260):
-            token_count_display = gr.Textbox(label="Context Size", value="Context Size: 0", interactive=False)
-            cost_display = gr.Textbox(label="Est. Cost", value="Est. Cost: $0.0000", interactive=False)
+    css="""
+    /* compact header */
+    #header-row { display:flex; align-items:center; gap:12px; padding:6px 10px; }
+    #header-row .gr-row { margin:0; }
+    /* make logo compact */
+    #header-row img { height:48px; width:auto; object-fit:contain; }
 
+    /* compact numeric badges (replace textboxes visually) */
+    .badge {
+        display:inline-block;
+        min-width:80px;
+        padding:6px 10px;
+        border-radius:14px;
+        background: #ffffff;
+        border: 1px solid #e6e6e6;
+        box-shadow: none;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
+        font-size:13px;
+        color:#111;
+        text-align:center;
+    }
+
+    /* subtle label styling placed above badges (uses native gradio labels if present) */
+    #token-box .gr-label, #cost-box .gr-label {
+        font-size:11px;
+        margin-bottom:4px;
+        color:#666;
+    }
+
+    /* ensure small footprint */
+    #token-box, #cost-box { padding:0; margin:0 6px; }
+    """ 
+) as demo:
+    # compact top bar: logo + token + cost (badges)
+    with gr.Row(elem_id="header-row"):
+        with gr.Column(scale=0, min_width=72):
+            logo_url = "https://github.com/alonie/discursus/raw/main/logo.png"
+            gr.Image(logo_url, height=48, interactive=False, container=False)
+        with gr.Column(scale=0, min_width=120, elem_id="token-box"):
+            token_count_display = gr.HTML(
+                "<div style='text-align:center;'>"
+                "<div style='font-size:11px;color:#666;margin-bottom:4px;'>Token Count</div>"
+                "<div class='badge' id='token-badge'>0</div>"
+                "</div>",
+                elem_id="token-box"
+            )
+        with gr.Column(scale=0, min_width=140, elem_id="cost-box"):
+            cost_display = gr.HTML(
+                "<div style='text-align:center;'>"
+                "<div style='font-size:11px;color:#666;margin-bottom:4px;'>Estimated Cost</div>"
+                "<div class='badge' id='cost-badge'>$0.00</div>"
+                "</div>",
+                elem_id="cost-box"
+            )
     # Advanced accordion wraps the rest of the controls that were previously above the chatbot
     with gr.Accordion("Advanced", open=False):
         with gr.Row():
@@ -500,6 +590,7 @@ with gr.Blocks(
             load_session_btn = gr.Button("Load Session")
             delete_session_btn = gr.Button("Delete Session")
             new_session_btn = gr.Button("New Session")
+            autosave_checkbox = gr.Checkbox(label="Auto-save to selected session", value=read_autosave_flag())
 
         with gr.Column(visible=False) as context_viewer_col:
             with gr.Row():
@@ -639,7 +730,7 @@ with gr.Blocks(
     def handle_send(user_question, history, p_model, files, use_openrouter):
         if not user_question.strip():
             tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
-            return history, gr.update(value=""), f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}"
+            return history, gr.update(value=""), _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
         yield from chat_turn(user_question, history, p_model, files, use_openrouter)
 
     def handle_upload(files):
@@ -660,7 +751,7 @@ with gr.Blocks(
         """Summarizes the conversation history to reduce token count."""
         if len(history) < 5: # Don't summarize very short conversations
             tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
-            yield history, f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}"
+            yield history, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
             return
 
         # Keep the first user message and the last 2 turns (4 messages)
@@ -695,7 +786,7 @@ with gr.Blocks(
         save_conversation(new_history)
 
         tokens, cost = calculate_cost_and_tokens(new_history, MODEL_MAP)
-        yield new_history, f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}"
+        yield new_history, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
 
     # --- Session handlers wired to the UI ---
     def save_session_handler(name: str, history: List[dict]):
@@ -708,8 +799,15 @@ with gr.Blocks(
 
     def load_session_handler(name: str):
         hist = load_session(name)
+        # remember this as the last session so autosave can target it
+        try:
+            if name:
+                with open(LAST_SESSION_FILE, "w", encoding="utf-8") as lf:
+                    lf.write(name)
+        except Exception:
+            pass
         tokens, cost = calculate_cost_and_tokens(hist, MODEL_MAP)
-        return hist, f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}"
+        return hist, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
 
     def delete_session_handler(name: str):
         delete_session(name)
@@ -719,7 +817,7 @@ with gr.Blocks(
 
     def new_session_handler():
         # clear session & prefill send box with default prompt
-        return [], gr.update(value=""), gr.update(value=POLYCOMB_PROMPT), "Context Size: 0", "Est. Cost: $0.0000"
+        return [], gr.update(value=""), gr.update(value=POLYCOMB_PROMPT), "0", "$0.0000"
 
     save_session_btn.click(save_session_handler, [session_name_input, chatbot], [session_dropdown, session_name_input])
     load_session_btn.click(load_session_handler, [session_dropdown], [chatbot, token_count_display, cost_display])
@@ -775,7 +873,7 @@ with gr.Blocks(
     )
 
     reset_btn.click(
-        lambda: ([], [], gr.update(placeholder="Enter your message or use the suggested question...", value=""), "Context Size: 0", "Est. Cost: $0.0000"),
+        lambda: ([], [], gr.update(placeholder="Enter your message or use the suggested question...", value=""), "0", "$0.0000"),
         [],
         [chatbot, file_state, user_input, token_count_display, cost_display]
     )
@@ -793,14 +891,14 @@ with gr.Blocks(
         if last and last in sessions:
             history = load_session(last)
             tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
-            return history, f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}", gr.update(choices=sessions, value=last), gr.update(value=last)
+            return history, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}"), gr.update(choices=sessions, value=last), gr.update(value=last), read_autosave_flag()
         # fallback to single-file conversation.json (legacy)
         history = load_conversation()
         tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
-        return history, f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}", gr.update(choices=sessions, value=sessions[0] if sessions else ""), gr.update(value="")
+        return history, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}"), gr.update(choices=sessions, value=sessions[0] if sessions else ""), gr.update(value=""), read_autosave_flag()
 
     # ensure persisted conversation restores on page reload
-    demo.load(on_load, [], [chatbot, token_count_display, cost_display, session_dropdown, session_name_input])
+    demo.load(on_load, [], [chatbot, token_count_display, cost_display, session_dropdown, session_name_input, autosave_checkbox])
 
     def reset_app():
         try:
@@ -812,7 +910,7 @@ with gr.Blocks(
         except Exception:
             pass
         # clear persisted data and prefill send box with default prompt
-        return [], [], gr.update(placeholder="Enter your message or use the suggested question...", value=POLYCOMB_PROMPT), "Context Size: 0", "Est. Cost: $0.0000"
+        return [], [], gr.update(placeholder="Enter your message or use the suggested question...", value=POLYCOMB_PROMPT), "0", "$0.0000"
 
     reset_btn.click(
         reset_app,
