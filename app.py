@@ -6,8 +6,118 @@ import tiktoken
 from dotenv import load_dotenv
 import json
 import tempfile
+import time
 
 load_dotenv() # Load variables from .env file
+
+# --- Persistence config ---
+PERSIST_PATH = os.path.join(os.path.dirname(__file__), "data", "conversation.json")
+
+def _ensure_data_dir():
+    d = os.path.dirname(PERSIST_PATH)
+    os.makedirs(d, exist_ok=True)
+
+def save_conversation(history: List[dict]):
+    """Save conversation history to disk (best-effort). Only store serialisable parts."""
+    try:
+        _ensure_data_dir()
+        serialisable = []
+        for m in history:
+            serialisable.append({
+                "role": m.get("role"),
+                "content": m.get("content")
+            })
+        with open(PERSIST_PATH, "w", encoding="utf-8") as f:
+            json.dump(serialisable, f, ensure_ascii=False, indent=2)
+
+        # Auto-create a named session on first save if none exists
+        try:
+            if not os.path.exists(LAST_SESSION_FILE):
+                ts_name = time.strftime("session-%A-%d-%B-%Y_%H-%M-%S", time.localtime())
+                save_session(ts_name, history)
+        except Exception:
+            pass
+
+    except Exception:
+        pass
+
+def load_conversation() -> List[dict]:
+    """Load conversation history from disk, return empty list on error."""
+    try:
+        with open(PERSIST_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        # ensure data is list of dicts with role/content
+        out = []
+        for m in data:
+            if isinstance(m, dict):
+                out.append({"role": m.get("role", "user"), "content": m.get("content", "")})
+        return out
+    except Exception:
+        return []
+
+# --- Sessions (named histories) ---
+SESSIONS_DIR = os.path.join(os.path.dirname(__file__), "data", "sessions")
+LAST_SESSION_FILE = os.path.join(os.path.dirname(__file__), "data", "last_session.txt")
+
+def _ensure_sessions_dir():
+    os.makedirs(SESSIONS_DIR, exist_ok=True)
+
+def _safe_session_filename(name: str) -> str:
+    safe = re.sub(r"[^A-Za-z0-9 _-]", "_", name).strip()
+    if not safe:
+        safe = "session"
+    return os.path.join(SESSIONS_DIR, f"{safe}.json")
+
+def list_sessions() -> List[str]:
+    _ensure_sessions_dir()
+    try:
+        files = [f for f in os.listdir(SESSIONS_DIR) if f.endswith(".json")]
+        names = sorted([os.path.splitext(f)[0] for f in files])
+        return names
+    except Exception:
+        return []
+
+def save_session(name: str, history: List[dict]):
+    # default to a human-readable timestamp if no name provided
+    if not name:
+        name = time.strftime("session-%A-%d-%B-%Y_%H-%M-%S", time.localtime())
+    _ensure_sessions_dir()
+    try:
+        with open(_safe_session_filename(name), "w", encoding="utf-8") as f:
+            json.dump(history, f, ensure_ascii=False, indent=2)
+        # remember last session
+        with open(LAST_SESSION_FILE, "w", encoding="utf-8") as lf:
+            lf.write(name)
+    except Exception:
+        pass
+
+def load_session(name: str) -> List[dict]:
+    if not name:
+        return []
+    try:
+        with open(_safe_session_filename(name), "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+def delete_session(name: str):
+    if not name:
+        return
+    try:
+        fp = _safe_session_filename(name)
+        if os.path.exists(fp):
+            os.remove(fp)
+        # if it was last session, remove last pointer
+        if os.path.exists(LAST_SESSION_FILE):
+            try:
+                with open(LAST_SESSION_FILE, "r", encoding="utf-8") as lf:
+                    last = lf.read().strip()
+                if last == name:
+                    os.remove(LAST_SESSION_FILE)
+            except Exception:
+                pass
+    except Exception:
+        pass
 
 # Lazy-load API clients
 _openrouter_client = None
@@ -268,6 +378,9 @@ def chat_turn(user_question: str, history: List[dict], primary_model: str, uploa
     history.append({"role": "user", "content": user_question})
     history.append({"role": "assistant", "content": format_bot_message("...", "Response", primary_model)})
     
+    # persist immediately so reload keeps the placeholder turn
+    save_conversation(history)
+
     tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
     yield history, gr.update(value=""), f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}"
 
@@ -276,6 +389,7 @@ def chat_turn(user_question: str, history: List[dict], primary_model: str, uploa
     if not model_info.get("supports_streaming", True):
         wait_message = f"Generating response with {primary_model} (non-streaming). This may take a moment..."
         history[-1]["content"] = format_bot_message(wait_message, "Response", primary_model)
+        save_conversation(history)
         yield history, gr.update(value=""), f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}"
 
     messages = build_messages_with_context(user_question, history[:-2], uploaded_files)
@@ -286,6 +400,8 @@ def chat_turn(user_question: str, history: List[dict], primary_model: str, uploa
     for chunk in response_stream:
         full_response += chunk
         history[-1]["content"] = format_bot_message(full_response, "Response", primary_model)
+        # persist after each chunk so reload shows progress
+        save_conversation(history)
         tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
         yield history, gr.update(value=""), f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}"
 
@@ -293,6 +409,7 @@ def handle_critique(history: List[dict], critique_model: str, uploaded_files, cr
     """Generates a critique of the conversation."""
     if not history:
         history.append({"role": "assistant", "content": format_bot_message("Cannot perform critique on an empty conversation.", "Critique", "System")})
+        save_conversation(history)
         tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
         yield history, f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}", ""
         return
@@ -301,20 +418,16 @@ def handle_critique(history: List[dict], critique_model: str, uploaded_files, cr
     
     history.append({"role": "user", "content": "Critique Request"})
     history.append({"role": "assistant", "content": format_bot_message("...", "Critique", critique_model)})
+    save_conversation(history)
     tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
     yield history, f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}", ""
 
-    # Provide immediate feedback for non-streaming models
-    model_info = MODEL_MAP[critique_model]
-    if not model_info.get("supports_streaming", True):
-        wait_message = f"Generating critique with {critique_model} (non-streaming). This may take a moment..."
-        history[-1]["content"] = format_bot_message(wait_message, "Critique", critique_model)
-        yield history, f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}", ""
-
+    # streaming loop persists as it progresses
     critique_response = ""
     for chunk in stream_model(critique_messages, critique_model, use_openrouter):
         critique_response += chunk
         history[-1]["content"] = format_bot_message(critique_response, "Critique", critique_model)
+        save_conversation(history)
         tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
         yield history, f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}", critique_response
 
@@ -322,6 +435,7 @@ def handle_review(history: List[dict], primary_model: str, uploaded_files, revie
     """Generates a revised response based on the last critique."""
     if not last_critique:
         history.append({"role": "assistant", "content": format_bot_message("A critique must be generated before a revision can be made.", "Revision", "System")})
+        save_conversation(history)
         tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
         yield history, f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}"
         return
@@ -331,29 +445,32 @@ def handle_review(history: List[dict], primary_model: str, uploaded_files, revie
 
     history.append({"role": "user", "content": "Review Request"})
     history.append({"role": "assistant", "content": format_bot_message("...", "Revision", primary_model)})
+    save_conversation(history)
     tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
     yield history, f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}"
-
-    # Provide immediate feedback for non-streaming models
-    model_info = MODEL_MAP[primary_model]
-    if not model_info.get("supports_streaming", True):
-        wait_message = f"Generating revision with {primary_model} (non-streaming). This may take a moment..."
-        history[-1]["content"] = format_bot_message(wait_message, "Revision", primary_model)
-        yield history, f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}"
 
     revised_response = ""
     for chunk in stream_model(review_messages, primary_model, use_openrouter):
         revised_response += chunk
         history[-1]["content"] = format_bot_message(revised_response, "Revision", primary_model)
+        save_conversation(history)
         tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
         yield history, f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}"
 
+
+# Human-readable default prompt (edit as you prefer)
+POLYCOMB_PROMPT = (
+    "Polycomb-like question: Describe the mechanisms and likely effects of Polycomb-group protein mediated "
+    "gene regulation in a therapeutic or agricultural context. Evaluate benefits, risks, ethical concerns, and "
+    "policy implications, and suggest evidence-backed guardrails."
+)
 
 with gr.Blocks(
     title="Discursus", 
     theme=gr.themes.Default(),
     css="#header-row {align-items: center;}"
 ) as demo:
+    # Header: logo + title, with cost/token kept visible outside the Advanced accordion
     with gr.Row(elem_id="header-row"):
         with gr.Column(scale=1, min_width=100):
             # Use the GitHub URL that correctly resolves the Git LFS object.
@@ -361,25 +478,77 @@ with gr.Blocks(
             gr.Image(logo_url, height=80, interactive=False, container=False)
         with gr.Column(scale=8):
             gr.Markdown("# Discursus: A System for Critical LLM Discourse")
+        # Keep these visible (not inside Advanced)
+        with gr.Column(scale=3, min_width=260):
+            token_count_display = gr.Textbox(label="Context Size", value="Context Size: 0", interactive=False)
+            cost_display = gr.Textbox(label="Est. Cost", value="Est. Cost: $0.0000", interactive=False)
 
-    with gr.Row():
-        primary_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Gemini 2.5 Pro", label="Primary Model", scale=3)
-        critique_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Claude 4.5 Sonnet", label="Critique Model", scale=3)
-        api_provider_switch = gr.Checkbox(label="Use OpenRouter", value=True, scale=1)
-        cost_display = gr.Textbox(label="Est. Cost", value="Est. Cost: $0.0000", interactive=False, scale=1)
-        token_count_display = gr.Textbox(label="Context Size", value="Context Size: 0", interactive=False, scale=1)
-        view_context_btn = gr.Button("View Context", scale=1)
-        summarize_btn = gr.Button("Summarise Context", scale=1)
+    # Advanced accordion wraps the rest of the controls that were previously above the chatbot
+    with gr.Accordion("Advanced", open=False):
+        with gr.Row():
+            primary_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Gemini 2.5 Flash", label="Primary Model", scale=3)
+            critique_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Claude 4.5 Sonnet", label="Critique Model", scale=3)
+            api_provider_switch = gr.Checkbox(label="Use OpenRouter", value=True, scale=1)
+            view_context_btn = gr.Button("View Context", scale=1)
+            summarize_btn = gr.Button("Summarise Context", scale=1)
 
-    with gr.Column(visible=False) as context_viewer_col:
+        # Session controls (persistence)
         with gr.Row():
-            gr.Markdown("### Conversation Context")
-        with gr.Row():
-            context_display = gr.Markdown()
-        with gr.Row():
-            download_file_btn = gr.File(label="Download Full Conversation", interactive=False)
-            close_context_btn = gr.Button("Close")
+            session_dropdown = gr.Dropdown(choices=list_sessions(), label="Saved Sessions", value=list_sessions()[0] if list_sessions() else "")
+            session_name_input = gr.Textbox(label="Session name", placeholder="Enter name to save current conversation")
+            save_session_btn = gr.Button("Save Session")
+            load_session_btn = gr.Button("Load Session")
+            delete_session_btn = gr.Button("Delete Session")
+            new_session_btn = gr.Button("New Session")
 
+        with gr.Column(visible=False) as context_viewer_col:
+            with gr.Row():
+                gr.Markdown("### Conversation Context")
+            with gr.Row():
+                context_display = gr.Markdown()
+            with gr.Row():
+                download_file_btn = gr.File(label="Download Full Conversation", interactive=False)
+                close_context_btn = gr.Button("Close")
+
+        with gr.Row():
+            example_questions_dd = gr.Dropdown(
+                choices=list(TEST_CASES.keys()), 
+                label="Select an Example Question",
+                value=list(TEST_CASES.keys())[0] # Default to first test case
+            )
+
+        with gr.Row():
+            with gr.Column(scale=10):
+                user_input = gr.Textbox(show_label=False, value=POLYCOMB_PROMPT, placeholder="Select an example or enter a custom question...", lines=4)
+            with gr.Column(scale=1, min_width=80):
+                send_btn = gr.Button("Send", variant="primary")
+            with gr.Column(scale=1, min_width=120):
+                upload_btn = gr.UploadButton("📎 Upload Files", file_count="multiple", file_types=["text", ".md", ".py", ".csv", ".json"])
+
+        gr.Markdown("---")
+        gr.Markdown("### Critique & Review Workflow")
+        
+        with gr.Row():
+            with gr.Column():
+                critique_btn = gr.Button("Generate Critique", variant="secondary")
+                critique_prompt_textbox = gr.Textbox(
+                    label="Critique Prompt",
+                    lines=5,
+                    value=(
+                        "Please provide a concise, constructive critique of the assistant's reasoning, accuracy, and helpfulness..."
+                    )
+                )
+            with gr.Column():
+                review_btn = gr.Button("Generate Revision", variant="secondary")
+                review_prompt_textbox = gr.Textbox(
+                    label="Review Prompt Template",
+                    lines=5,
+                    value="Based on the entire conversation history and the following critique, please provide a revised, improved version of your last response."
+                )
+
+        reset_btn = gr.Button("🔄 New Conversation")
+
+    # Chatbot remains visible below Advanced
     chatbot = gr.Chatbot(label="Conversation", height=600, type="messages")
 
     with gr.Row():
@@ -391,7 +560,7 @@ with gr.Blocks(
 
     with gr.Row():
         with gr.Column(scale=10):
-            user_input = gr.Textbox(show_label=False, placeholder="Select an example or enter a custom question...", lines=4)
+            user_input = gr.Textbox(show_label=False, value=POLYCOMB_PROMPT, placeholder="Select an example or enter a custom question...", lines=4)
         with gr.Column(scale=1, min_width=80):
             send_btn = gr.Button("Send", variant="primary")
         with gr.Column(scale=1, min_width=120):
@@ -425,7 +594,7 @@ with gr.Blocks(
                 "Synthesize the critique into your reasoning and address any shortcomings identified."
             )
 
-    reset_btn = gr.Button("🔄 New Conversation")
+        reset_btn = gr.Button("🔄 New Conversation")
 
 
     file_state = gr.State([])
@@ -477,12 +646,21 @@ with gr.Blocks(
         """Handles the file upload event and updates the UI."""
         file_names = [os.path.basename(f.name) for f in files]
         upload_status = f"📎 Uploaded: {', '.join(file_names)}. You can now ask questions about them."
+        # no conversation change but persist file list for transparency
+        try:
+            _ensure_data_dir()
+            meta = {"last_files": file_names}
+            with open(os.path.join(os.path.dirname(PERSIST_PATH), "meta.json"), "w", encoding="utf-8") as mf:
+                json.dump(meta, mf, ensure_ascii=False)
+        except Exception:
+            pass
         return files, upload_status
 
     def handle_summarize(history: List[dict]) -> Generator:
         """Summarizes the conversation history to reduce token count."""
         if len(history) < 5: # Don't summarize very short conversations
-            yield history, f"Context Size: {count_tokens(history)}"
+            tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
+            yield history, f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}"
             return
 
         # Keep the first user message and the last 2 turns (4 messages)
@@ -513,8 +691,40 @@ with gr.Blocks(
         # Reconstruct the history
         new_history = [first_user_message, summary_message] + last_turns
         
+        # persist summarized history
+        save_conversation(new_history)
+
         tokens, cost = calculate_cost_and_tokens(new_history, MODEL_MAP)
         yield new_history, f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}"
+
+    # --- Session handlers wired to the UI ---
+    def save_session_handler(name: str, history: List[dict]):
+        # allow automatic name if empty
+        if not name:
+            name = time.strftime("session-%A-%d-%B-%Y_%H-%M-%S", time.localtime())
+        save_session(name, history)
+        sessions = list_sessions()
+        return gr.update(choices=sessions, value=name), gr.update(value=name)
+
+    def load_session_handler(name: str):
+        hist = load_session(name)
+        tokens, cost = calculate_cost_and_tokens(hist, MODEL_MAP)
+        return hist, f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}"
+
+    def delete_session_handler(name: str):
+        delete_session(name)
+        sessions = list_sessions()
+        new_value = sessions[0] if sessions else ""
+        return gr.update(choices=sessions, value=new_value), gr.update(value="")
+
+    def new_session_handler():
+        # clear session & prefill send box with default prompt
+        return [], gr.update(value=""), gr.update(value=POLYCOMB_PROMPT), "Context Size: 0", "Est. Cost: $0.0000"
+
+    save_session_btn.click(save_session_handler, [session_name_input, chatbot], [session_dropdown, session_name_input])
+    load_session_btn.click(load_session_handler, [session_dropdown], [chatbot, token_count_display, cost_display])
+    delete_session_btn.click(delete_session_handler, [session_dropdown], [session_dropdown, session_name_input])
+    new_session_btn.click(new_session_handler, [], [chatbot, session_name_input, user_input, token_count_display, cost_display])
 
     send_btn.click(
         handle_send,
@@ -570,9 +780,45 @@ with gr.Blocks(
         [chatbot, file_state, user_input, token_count_display, cost_display]
     )
 
-if __name__ == "__main__":
-    demo.launch(
-        server_name="0.0.0.0", 
-        server_port=int(os.getenv("PORT", 7860)), 
-        share=False
+    def on_load():
+        """Load persisted conversation on UI load (restore last session if present)."""
+        last = ""
+        try:
+            if os.path.exists(LAST_SESSION_FILE):
+                with open(LAST_SESSION_FILE, "r", encoding="utf-8") as lf:
+                    last = lf.read().strip()
+        except Exception:
+            last = ""
+        sessions = list_sessions()
+        if last and last in sessions:
+            history = load_session(last)
+            tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
+            return history, f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}", gr.update(choices=sessions, value=last), gr.update(value=last)
+        # fallback to single-file conversation.json (legacy)
+        history = load_conversation()
+        tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
+        return history, f"Context Size: {tokens}", f"Est. Cost: ${cost:.4f}", gr.update(choices=sessions, value=sessions[0] if sessions else ""), gr.update(value="")
+
+    # ensure persisted conversation restores on page reload
+    demo.load(on_load, [], [chatbot, token_count_display, cost_display, session_dropdown, session_name_input])
+
+    def reset_app():
+        try:
+            if os.path.exists(PERSIST_PATH):
+                os.remove(PERSIST_PATH)
+            meta_fp = os.path.join(os.path.dirname(PERSIST_PATH), "meta.json")
+            if os.path.exists(meta_fp):
+                os.remove(meta_fp)
+        except Exception:
+            pass
+        # clear persisted data and prefill send box with default prompt
+        return [], [], gr.update(placeholder="Enter your message or use the suggested question...", value=POLYCOMB_PROMPT), "Context Size: 0", "Est. Cost: $0.0000"
+
+    reset_btn.click(
+        reset_app,
+        [],
+        [chatbot, file_state, user_input, token_count_display, cost_display]
     )
+
+if __name__ == "__main__":
+    demo.launch(server_name="0.0.0.0", server_port=int(os.getenv("PORT", 7860)), share=False)
