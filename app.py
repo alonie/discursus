@@ -582,36 +582,38 @@ with gr.Blocks(
     #token-box, #cost-box { padding:0; margin:0 6px; }
     """ 
 ) as demo:
-    # compact top bar: logo + token + cost (badges)
-    with gr.Row(elem_id="header-row"):
-        with gr.Column(scale=0, min_width=72):
-            logo_url = "https://github.com/alonie/discursus/raw/main/logo.png"
-            gr.Image(logo_url, height=48, interactive=False, container=False)
-        with gr.Column(scale=0, min_width=120, elem_id="token-box"):
-            token_count_display = gr.HTML(
-                "<div style='text-align:center;'>"
-                "<div style='font-size:11px;color:#666;margin-bottom:4px;'>Token Count</div>"
-                "<div class='badge' id='token-badge'>0</div>"
-                "</div>",
-                elem_id="token-box"
-            )
-        with gr.Column(scale=0, min_width=140, elem_id="cost-box"):
-            cost_display = gr.HTML(
-                "<div style='text-align:center;'>"
-                "<div style='font-size:11px;color:#666;margin-bottom:4px;'>Estimated Cost</div>"
-                "<div class='badge' id='cost-badge'>$0.00</div>"
-                "</div>",
-                elem_id="cost-box"
-            )
     
     # MAIN LAYOUT: Side-by-side conversation and controls
     with gr.Row():
-        # LEFT COLUMN: Conversation (main focus)
-        with gr.Column(scale=7, min_width=400):
+        # LEFT COLUMN: Conversation (main focus) - now gets more space
+        with gr.Column(scale=8, min_width=500):
             chatbot = gr.Chatbot(label="Conversation", height=700, type="messages")
         
-        # RIGHT COLUMN: All controls always visible
+        # RIGHT COLUMN: Header + All controls 
         with gr.Column(scale=3, min_width=350):
+            # Header moved to right column: logo + token + cost (badges)
+            with gr.Row(elem_id="header-row"):
+                with gr.Column(scale=0, min_width=48):
+                    logo_url = "https://github.com/alonie/discursus/raw/main/logo.png"
+                    gr.Image(logo_url, height=48, interactive=False, container=False)
+                with gr.Column(scale=1, min_width=80, elem_id="token-box"):
+                    token_count_display = gr.HTML(
+                        "<div style='text-align:center;'>"
+                        "<div style='font-size:11px;color:#666;margin-bottom:4px;'>Tokens</div>"
+                        "<div class='badge' id='token-badge'>0</div>"
+                        "</div>",
+                        elem_id="token-box"
+                    )
+                with gr.Column(scale=1, min_width=90, elem_id="cost-box"):
+                    cost_display = gr.HTML(
+                        "<div style='text-align:center;'>"
+                        "<div style='font-size:11px;color:#666;margin-bottom:4px;'>Cost</div>"
+                        "<div class='badge' id='cost-badge'>$0.00</div>"
+                        "</div>",
+                        elem_id="cost-box"
+                    )
+            
+            gr.Markdown("---")  # Separator between header and controls
             # Example Questions
             example_questions_dd = gr.Dropdown(
                 choices=list(TEST_CASES.keys()), 
@@ -932,23 +934,10 @@ with gr.Blocks(
     )
 
     def on_load():
-        """Load persisted conversation on UI load (restore last session if present)."""
-        last = ""
-        try:
-            if os.path.exists(LAST_SESSION_FILE):
-                with open(LAST_SESSION_FILE, "r", encoding="utf-8") as lf:
-                    last = lf.read().strip()
-        except Exception:
-            last = ""
+        """Initialize UI with empty conversation and available sessions."""
         sessions = list_sessions()
-        if last and last in sessions:
-            history = load_session(last)
-            tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
-            return history, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}"), gr.update(choices=sessions, value=last), gr.update(value=last), read_autosave_flag()
-        # fallback to single-file conversation.json (legacy)
-        history = load_conversation()
-        tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
-        return history, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}"), gr.update(choices=sessions, value=sessions[0] if sessions else ""), gr.update(value=""), read_autosave_flag()
+        # Start with empty conversation - user can explicitly load a session if desired
+        return [], _badge_html("Token Count", "0"), _badge_html("Estimated Cost", "$0.0000"), gr.update(choices=sessions, value=sessions[0] if sessions else ""), gr.update(value=""), read_autosave_flag()
 
     # ensure persisted conversation restores on page reload
     demo.load(on_load, [], [chatbot, token_count_display, cost_display, session_dropdown, session_name_input, autosave_checkbox])
