@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import json
 import tempfile
 import time
+from mongodb_persistence import get_mongodb_persistence
 
 load_dotenv() # Load variables from .env file
 
@@ -19,142 +20,79 @@ def _badge_html(label: str, value: str) -> str:
         "</div>"
     )
 
-# --- Persistence config ---
-PERSIST_PATH = os.path.join(os.path.dirname(__file__), "data", "conversation.json")
-AUTOSAVE_FLAG_FILE = os.path.join(os.path.dirname(__file__), "data", "autosave_flag.txt")
-
-def _ensure_data_dir():
-    d = os.path.dirname(PERSIST_PATH)
-    os.makedirs(d, exist_ok=True)
+# --- MongoDB Persistence Functions ---
+# These functions maintain the same interface as the file-based ones
+# but use MongoDB for storage
 
 def set_autosave_flag(value: bool):
+    """Set autosave flag in MongoDB."""
     try:
-        _ensure_data_dir()
-        with open(AUTOSAVE_FLAG_FILE, "w", encoding="utf-8") as f:
-            f.write("1" if value else "0")
-    except Exception:
-        pass
+        db = get_mongodb_persistence()
+        db.set_autosave_flag(value)
+    except Exception as e:
+        print(f"Error setting autosave flag: {e}")
 
 def read_autosave_flag() -> bool:
+    """Read autosave flag from MongoDB."""
     try:
-        if os.path.exists(AUTOSAVE_FLAG_FILE):
-            with open(AUTOSAVE_FLAG_FILE, "r", encoding="utf-8") as f:
-                return f.read().strip() == "1"
-    except Exception:
-        pass
-    return False
+        db = get_mongodb_persistence()
+        return db._get_autosave_flag()
+    except Exception as e:
+        print(f"Error reading autosave flag: {e}")
+        return False
 
 def save_conversation(history: List[dict]):
-    """Save conversation history to disk (best-effort). Only store serialisable parts."""
+    """Save conversation history to MongoDB."""
     try:
-        _ensure_data_dir()
-        serialisable = []
-        for m in history:
-            serialisable.append({
-                "role": m.get("role"),
-                "content": m.get("content")
-            })
-        with open(PERSIST_PATH, "w", encoding="utf-8") as f:
-            json.dump(serialisable, f, ensure_ascii=False, indent=2)
-
-        # Auto-create a named session on first save if none exists
-        try:
-            if not os.path.exists(LAST_SESSION_FILE):
-                ts_name = time.strftime("session-%A-%d-%B-%Y_%H-%M-%S", time.localtime())
-                save_session(ts_name, history)
-        except Exception:
-            pass
-
-        # If autosave flag set, also persist into last named session
-        try:
-            if read_autosave_flag() and os.path.exists(LAST_SESSION_FILE):
-                with open(LAST_SESSION_FILE, "r", encoding="utf-8") as lf:
-                    last_name = lf.read().strip()
-                if last_name:
-                    save_session(last_name, history)
-        except Exception:
-            pass
-
-    except Exception:
-        pass
+        db = get_mongodb_persistence()
+        db.save_conversation(history)
+    except Exception as e:
+        print(f"Error saving conversation: {e}")
 
 def load_conversation() -> List[dict]:
-    """Load conversation history from disk, return empty list on error."""
+    """Load conversation history from MongoDB."""
     try:
-        with open(PERSIST_PATH, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        # ensure data is list of dicts with role/content
-        out = []
-        for m in data:
-            if isinstance(m, dict):
-                out.append({"role": m.get("role", "user"), "content": m.get("content", "")})
-        return out
-    except Exception:
+        db = get_mongodb_persistence()
+        return db.load_conversation()
+    except Exception as e:
+        print(f"Error loading conversation: {e}")
         return []
 
-# --- Sessions (named histories) ---
-SESSIONS_DIR = os.path.join(os.path.dirname(__file__), "data", "sessions")
-LAST_SESSION_FILE = os.path.join(os.path.dirname(__file__), "data", "last_session.txt")
-
-def _ensure_sessions_dir():
-    os.makedirs(SESSIONS_DIR, exist_ok=True)
-
-def _safe_session_filename(name: str) -> str:
-    safe = re.sub(r"[^A-Za-z0-9 _-]", "_", name).strip()
-    if not safe:
-        safe = "session"
-    return os.path.join(SESSIONS_DIR, f"{safe}.json")
+# --- Session Management Functions ---
 
 def list_sessions() -> List[str]:
-    _ensure_sessions_dir()
+    """List all saved session names from MongoDB."""
     try:
-        files = [f for f in os.listdir(SESSIONS_DIR) if f.endswith(".json")]
-        names = sorted([os.path.splitext(f)[0] for f in files])
-        return names
-    except Exception:
+        db = get_mongodb_persistence()
+        return db.list_sessions()
+    except Exception as e:
+        print(f"Error listing sessions: {e}")
         return []
 
 def save_session(name: str, history: List[dict]):
-    # default to a human-readable timestamp if no name provided
-    if not name:
-        name = time.strftime("session-%A-%d-%B-%Y_%H-%M-%S", time.localtime())
-    _ensure_sessions_dir()
+    """Save a named session to MongoDB."""
     try:
-        with open(_safe_session_filename(name), "w", encoding="utf-8") as f:
-            json.dump(history, f, ensure_ascii=False, indent=2)
-        # remember last session
-        with open(LAST_SESSION_FILE, "w", encoding="utf-8") as lf:
-            lf.write(name)
-    except Exception:
-        pass
+        db = get_mongodb_persistence()
+        db.save_session(name, history)
+    except Exception as e:
+        print(f"Error saving session: {e}")
 
 def load_session(name: str) -> List[dict]:
-    if not name:
-        return []
+    """Load a named session from MongoDB."""
     try:
-        with open(_safe_session_filename(name), "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
+        db = get_mongodb_persistence()
+        return db.load_session(name)
+    except Exception as e:
+        print(f"Error loading session: {e}")
         return []
 
 def delete_session(name: str):
-    if not name:
-        return
+    """Delete a named session from MongoDB."""
     try:
-        fp = _safe_session_filename(name)
-        if os.path.exists(fp):
-            os.remove(fp)
-        # if it was last session, remove last pointer
-        if os.path.exists(LAST_SESSION_FILE):
-            try:
-                with open(LAST_SESSION_FILE, "r", encoding="utf-8") as lf:
-                    last = lf.read().strip()
-                if last == name:
-                    os.remove(LAST_SESSION_FILE)
-            except Exception:
-                pass
-    except Exception:
-        pass
+        db = get_mongodb_persistence()
+        db.delete_session(name)
+    except Exception as e:
+        print(f"Error deleting session: {e}")
 
 # Lazy-load API clients
 _openrouter_client = None
@@ -875,14 +813,7 @@ with gr.Blocks(
         """Handles the file upload event and updates the UI."""
         file_names = [os.path.basename(f.name) for f in files]
         upload_status = f"📎 Uploaded: {', '.join(file_names)}. You can now ask questions about them."
-        # no conversation change but persist file list for transparency
-        try:
-            _ensure_data_dir()
-            meta = {"last_files": file_names}
-            with open(os.path.join(os.path.dirname(PERSIST_PATH), "meta.json"), "w", encoding="utf-8") as mf:
-                json.dump(meta, mf, ensure_ascii=False)
-        except Exception:
-            pass
+        # File metadata could be stored in MongoDB if needed
         return files, upload_status
 
     def handle_summarize(history: List[dict]) -> Generator:
@@ -937,11 +868,11 @@ with gr.Blocks(
 
     def load_session_handler(name: str):
         hist = load_session(name)
-        # remember this as the last session so autosave can target it
+        # Remember this as the last session so autosave can target it
         try:
             if name:
-                with open(LAST_SESSION_FILE, "w", encoding="utf-8") as lf:
-                    lf.write(name)
+                db = get_mongodb_persistence()
+                db._set_last_session(name)
         except Exception:
             pass
         tokens, cost = calculate_cost_and_tokens(hist, MODEL_MAP)
@@ -1017,24 +948,42 @@ with gr.Blocks(
     )
 
     def on_load():
-        """Initialize UI with empty conversation and available sessions."""
+        """Initialize UI with persisted conversation and available sessions."""
         sessions = list_sessions()
-        # Start with empty conversation - user can explicitly load a session if desired
-        return [], _badge_html("Token Count", "0"), _badge_html("Estimated Cost", "$0.0000"), gr.update(choices=sessions, value=sessions[0] if sessions else ""), gr.update(value=""), read_autosave_flag()
+        
+        # Load the current conversation from MongoDB (like the original file-based version)
+        history = load_conversation()
+        
+        # Calculate costs for the loaded conversation
+        if history:
+            tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
+            token_display = _badge_html("Token Count", str(tokens))
+            cost_display = _badge_html("Estimated Cost", f"${cost:.4f}")
+        else:
+            token_display = _badge_html("Token Count", "0")
+            cost_display = _badge_html("Estimated Cost", "$0.0000")
+        
+        # Set the session dropdown to the last used session
+        try:
+            db = get_mongodb_persistence()
+            last_session = db._get_last_session()
+            selected_session = last_session if last_session in sessions else (sessions[0] if sessions else "")
+        except:
+            selected_session = sessions[0] if sessions else ""
+        
+        return history, token_display, cost_display, gr.update(choices=sessions, value=selected_session), gr.update(value=""), read_autosave_flag()
 
     # ensure persisted conversation restores on page reload
     demo.load(on_load, [], [chatbot, token_count_display, cost_display, session_dropdown, session_name_input, autosave_checkbox])
 
     def reset_app():
         try:
-            if os.path.exists(PERSIST_PATH):
-                os.remove(PERSIST_PATH)
-            meta_fp = os.path.join(os.path.dirname(PERSIST_PATH), "meta.json")
-            if os.path.exists(meta_fp):
-                os.remove(meta_fp)
+            # Clear current conversation in MongoDB
+            db = get_mongodb_persistence()
+            db.save_conversation([])  # Save empty conversation
         except Exception:
             pass
-        # clear persisted data and prefill send box with default prompt
+        # Clear persisted data and prefill send box with default prompt
         return [], [], gr.update(placeholder="Enter your message or use the suggested question...", value=POLYCOMB_PROMPT), "0", "$0.0000"
 
     reset_btn.click(
@@ -1044,4 +993,28 @@ with gr.Blocks(
     )
 
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", server_port=int(os.getenv("PORT", 7860)), share=False)
+    import socket
+    
+    def find_free_port(start_port=7860):
+        """Find a free port starting from the given port."""
+        for port in range(start_port, start_port + 100):
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.bind(('', port))
+                    return port
+            except OSError:
+                continue
+        return start_port  # fallback
+    
+    # Use environment PORT or find a free port starting from 7860
+    preferred_port = int(os.getenv("PORT", 7860))
+    if os.getenv("PORT"):
+        # If PORT is explicitly set, use it (might fail if occupied)
+        port = preferred_port
+    else:
+        # Auto-find free port starting from 7860
+        port = find_free_port(preferred_port)
+        if port != preferred_port:
+            print(f"ℹ️  Port {preferred_port} is busy, using port {port} instead")
+    
+    demo.launch(server_name="0.0.0.0", server_port=port, share=False)

@@ -42,10 +42,13 @@ Discursus is a Gradio-based web application designed for structured, in-depth co
     ```
 
 3.  **Set up environment variables:**
-    Create a file named `.env` in the root of the project and add your API keys. You only need to provide keys for the services you intend to use.
+    Create a file named `.env` in the root of the project and add your API keys and MongoDB connection string. You only need to provide keys for the services you intend to use.
 
     ```env
     # .env
+
+    # MongoDB Configuration (required)
+    MONGODB_URI="mongodb+srv://username:password@cluster.mongodb.net/discursus?retryWrites=true&w=majority"
 
     # For OpenRouter.ai access (recommended)
     OPENROUTER_API_KEY="sk-or-..."
@@ -54,6 +57,26 @@ Discursus is a Gradio-based web application designed for structured, in-depth co
     OPENAI_API_KEY="sk-..."
     ANTHROPIC_API_KEY="sk-ant-..."
     GEMINI_API_KEY="..."
+    ```
+
+4.  **Set up MongoDB:**
+    Discursus uses MongoDB for persistent storage of conversations and sessions. You have two options:
+    
+    **Option A: MongoDB Atlas (Recommended)**
+    1. Create a free account at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+    2. Create a new cluster (the free tier is sufficient for most use cases)
+    3. Get your connection string from the "Connect" button in your cluster dashboard
+    4. Add your connection string to the `.env` file as `MONGODB_URI`
+    
+    **Option B: Local MongoDB**
+    1. Install MongoDB locally following the [official installation guide](https://docs.mongodb.com/manual/installation/)
+    2. Start your MongoDB service
+    3. Use a local connection string like: `MONGODB_URI="mongodb://localhost:27017/discursus"`
+
+5.  **Migrate existing data (if upgrading):**
+    If you have existing conversation data from a previous file-based version, run the migration script:
+    ```bash
+    python migrate_to_mongodb.py
     ```
 
 ### Running the Application
@@ -83,14 +106,16 @@ The Discursus interface is organized for a structured analytical workflow.
 ```
 .
 ├── app.py                    # Main Gradio application logic
+├── mongodb_persistence.py    # MongoDB database operations
+├── migrate_to_mongodb.py     # Migration script from file-based storage
 ├── requirements.txt          # Python dependencies
 ├── .env                      # API keys and environment variables (user-created)
-├── data/                     # Default directory for saved sessions and logs
-│   ├── sessions/
-│   └── conversation.json
+├── .env.example             # Template for environment variables
 ├── content/                  # Location for test cases and other static content
-└── README.md                 # This file
+└── README.md                # This file
 ```
+
+**Note**: With MongoDB persistence, conversation data is now stored in your MongoDB database instead of local files. The `data/` directory is no longer needed.
 
 ## Configuration
 
