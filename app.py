@@ -511,9 +511,13 @@ def handle_review(history: List[dict], primary_model: str, uploaded_files, revie
 
 # Human-readable default prompt (edit as you prefer)
 POLYCOMB_PROMPT = (
-    "Polycomb-like question: Describe the mechanisms and likely effects of Polycomb-group protein mediated "
-    "gene regulation in a therapeutic or agricultural context. Evaluate benefits, risks, ethical concerns, and "
-    "policy implications, and suggest evidence-backed guardrails."
+    "A major city is considering implementing a four-day work week for all municipal employees as a pilot program. "
+    "Proponents argue it will improve work-life balance, reduce burnout, and maintain productivity while cutting "
+    "operational costs. Critics worry about reduced public services, implementation costs, and setting a precedent "
+    "that could pressure private employers. The city faces budget constraints, has aging infrastructure needs, and "
+    "a workforce where 40% are considering leaving for other opportunities. Should the city implement this pilot? "
+    "Analyze the economic, social, and practical implications, considering both short-term impacts and long-term "
+    "consequences for the city, its employees, and its residents."
 )
 
 with gr.Blocks(
