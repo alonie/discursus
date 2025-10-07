@@ -283,8 +283,28 @@ def load_test_cases(filepath: str) -> dict:
         cases["Default Scenario"] = "A mid-sized country faces a resurgence of a novel respiratory virus. Vaccination rates have plateaued between 45-65%, ICU capacity varies between 75-95% across regions, and economic recovery remains fragile. Recent epidemiological studies suggest transmission rates may be 30-60% higher than initial models predicted. The government is considering reintroducing strict lockdowns for 4-8 weeks to suppress transmission before winter. Should it do so? Justify your position with evidence-backed analysis of epidemiological risk, economic stability, civil liberties, and public trust. Provide specific citations for key empirical claims and measurable predictions your approach would generate."
     return cases
 
+# Demo scenarios designed to showcase ensemble LLM capabilities  
+DEMO_SCENARIOS = {
+    "Historical Counterfactual": """It's 1947. You're advising the newly formed UN on the Palestine partition plan. You have access to: British Mandate reports, population data, religious significance maps, economic surveys, and testimonies from all parties. Knowing what we know about nation-building, conflict resolution, and regional stability - but constrained by 1947 knowledge and possibilities - what alternative approach might have prevented decades of conflict? Consider: demographic realities, religious significance, economic interdependence, and governance models available in 1947.""",
+    
+    "Scientific Controversy": """Recent studies on intermittent fasting show contradictory results. Study A (n=50,000, 5-year follow-up) shows 23% reduction in cardiovascular events and improved insulin sensitivity. Study B (n=30,000, 2-year follow-up) shows 15% increased eating disorder rates and social dysfunction. Study C (n=15,000, metabolic ward) questions long-term metabolic benefits. Meta-analysis D identifies publication bias favoring positive results. Should major health authorities recommend intermittent fasting for general population health? Consider: study quality, population differences, implementation challenges, and alternative approaches.""",
+    
+    "Urban Development Dilemma": """A mid-sized city faces a critical decision: approve a $2.8B urban redevelopment project that would create 18,000 jobs and modernize aging infrastructure, but requires demolishing the Riverside Historic District - home to 3,200 low-income residents, 40+ small businesses, and buildings dating to the 1880s. Environmental groups cite groundwater contamination risks. Economists argue the project is essential for regional competitiveness. The housing authority reports a 15-year wait list for affordable units. You have 8 months to decide before federal funding expires. What should the city do?"""
+}
+
 # Load test cases at startup from the new file
 TEST_CASES = load_test_cases("content/4domains_3complexity_16testcases_4Oct25.json")
+
+# Add demo scenarios to showcase ensemble capabilities  
+TEST_CASES.update({
+    "🎯 DEMO: Historical Counterfactual": DEMO_SCENARIOS["Historical Counterfactual"],
+    "🎯 DEMO: Scientific Controversy": DEMO_SCENARIOS["Scientific Controversy"], 
+    "🎯 DEMO: Urban Development": DEMO_SCENARIOS["Urban Development Dilemma"]
+})
+
+print(f"DEBUG: Total test cases loaded: {len(TEST_CASES)}")
+print(f"DEBUG: Demo scenarios: {[k for k in TEST_CASES.keys() if '🎯' in k]}")
+print(f"DEBUG: First 5 keys: {list(TEST_CASES.keys())[:5]}")
 
 
 MODEL_MAP = {
@@ -451,8 +471,8 @@ def handle_critique(history: List[dict], critique_model: str, uploaded_files, cr
         yield history, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}"), ""
         return
 
-    # Use full prompt if user hasn't customized it (still shows short version)
-    actual_prompt = FULL_CRITIQUE_PROMPT if critique_prompt == SHORT_CRITIQUE_PROMPT else critique_prompt
+    # Use enhanced demo prompt if user hasn't customized it (still shows short version)
+    actual_prompt = DEMO_CRITIQUE_PROMPT if critique_prompt == SHORT_CRITIQUE_PROMPT else critique_prompt
     critique_messages = build_messages_with_context(actual_prompt, history, uploaded_files)
     
     history.append({"role": "user", "content": "Critique Request"})
@@ -493,8 +513,8 @@ def handle_review(history: List[dict], primary_model: str, uploaded_files, revie
         yield history, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
         return
 
-    # Use full prompt if user hasn't customized it (still shows short version)
-    actual_template = FULL_REVIEW_PROMPT if review_prompt_template == SHORT_REVIEW_PROMPT else review_prompt_template
+    # Use enhanced demo prompt if user hasn't customized it (still shows short version)
+    actual_template = DEMO_SYNTHESIS_PROMPT if review_prompt_template == SHORT_REVIEW_PROMPT else review_prompt_template
     review_prompt = f"{actual_template}\n\n--- CRITIQUE ---\n{last_critique}\n--- END CRITIQUE ---"
     review_messages = build_messages_with_context(review_prompt, history, uploaded_files)
 
@@ -513,34 +533,84 @@ def handle_review(history: List[dict], primary_model: str, uploaded_files, revie
         yield history, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
 
 
-# Human-readable default prompt (edit as you prefer)
-POLYCOMB_PROMPT = (
-    "A major city is considering implementing a four-day work week for all municipal employees as a pilot program. "
-    "Proponents argue it will improve work-life balance, reduce burnout, and maintain productivity while cutting "
-    "operational costs. Critics worry about reduced public services, implementation costs, and setting a precedent "
-    "that could pressure private employers. The city faces budget constraints, has aging infrastructure needs, and "
-    "a workforce where 40% are considering leaving for other opportunities. Should the city implement this pilot? "
-    "Analyze the economic, social, and practical implications, considering both short-term impacts and long-term "
-    "consequences for the city, its employees, and its residents."
-)
+# Human-readable default prompt (edit as you prefer) - Using demo scenario for impact
+POLYCOMB_PROMPT = """A mid-sized city faces a critical decision: approve a $2.8B urban redevelopment project that would create 18,000 jobs and modernize aging infrastructure, but requires demolishing the Riverside Historic District - home to 3,200 low-income residents, 40+ small businesses, and buildings dating to the 1880s. Environmental groups cite groundwater contamination risks. Economists argue the project is essential for regional competitiveness. The housing authority reports a 15-year wait list for affordable units. You have 8 months to decide before federal funding expires. What should the city do?"""
 
-# Full prompts sent to LLMs (not displayed in UI)
-FULL_CRITIQUE_PROMPT = (
-    "Please provide a concise, constructive critique of the assistant's reasoning, accuracy, and helpfulness "
-    "throughout the preceding conversation. Identify any potential biases, logical fallacies, or missed "
-    "opportunities for a more comprehensive response. Be extremely critical of citations and confirm or refute "
-    "each specific citation, as existing or hallucinated, and then as relevant or not. Provide a clear "
-    "assessment of each and every citation and mark each with a Status icon (green existing/red hallucinated) "
-    "+ explanation and a Relevance icon (red 'X', or an orange, or yellow or green) + explanation. On this "
-    "basis, and the overall assessment of the response, provide an overall critique rating out of 10 for the response."
-)
+# Demo scenarios designed to showcase ensemble LLM capabilities  
+DEMO_SCENARIOS = {
+    "Historical Counterfactual": """It's 1947. You're advising the newly formed UN on the Palestine partition plan. You have access to: British Mandate reports, population data, religious significance maps, economic surveys, and testimonies from all parties. Knowing what we know about nation-building, conflict resolution, and regional stability - but constrained by 1947 knowledge and possibilities - what alternative approach might have prevented decades of conflict? Consider: demographic realities, religious significance, economic interdependence, and governance models available in 1947.""",
+    
+    "Scientific Controversy": """Recent studies on intermittent fasting show contradictory results. Study A (n=50,000, 5-year follow-up) shows 23% reduction in cardiovascular events and improved insulin sensitivity. Study B (n=30,000, 2-year follow-up) shows 15% increased eating disorder rates and social dysfunction. Study C (n=15,000, metabolic ward) questions long-term metabolic benefits. Meta-analysis D identifies publication bias favoring positive results. Should major health authorities recommend intermittent fasting for general population health? Consider: study quality, population differences, implementation challenges, and alternative approaches.""",
+    
+    "Urban Development Dilemma": """A mid-sized city faces a critical decision: approve a $2.8B urban redevelopment project that would create 18,000 jobs and modernize aging infrastructure, but requires demolishing the Riverside Historic District - home to 3,200 low-income residents, 40+ small businesses, and buildings dating to the 1880s. Environmental groups cite groundwater contamination risks. Economists argue the project is essential for regional competitiveness. The housing authority reports a 15-year wait list for affordable units. You have 8 months to decide before federal funding expires. What should the city do?"""
+}
 
-FULL_REVIEW_PROMPT = (
-    "Based on the entire conversation history and the following critique, please provide a revised, improved "
-    "version of your last response. Synthesize the critique into your reasoning and address any shortcomings "
-    "identified. Ensure that your revised response is more accurate, comprehensive, and helpful than the "
-    "original while maintaining clarity and readability."
-)
+# Enhanced prompts for demo impact
+DEMO_CRITIQUE_PROMPT = """Provide a rigorous, multi-dimensional critique of the reasoning and recommendations above. Evaluate:
+
+**ANALYTICAL RIGOR** (1-10): Are assumptions clearly stated? Is evidence properly weighted? Are alternative explanations considered?
+
+**STAKEHOLDER CONSIDERATION** (1-10): Are all affected parties identified? Are power dynamics and competing interests adequately addressed?
+
+**IMPLEMENTATION FEASIBILITY** (1-10): Are practical constraints acknowledged? Are implementation steps realistic and specific?
+
+**UNINTENDED CONSEQUENCES** (1-10): Are potential negative outcomes anticipated? Are feedback loops and system dynamics considered?
+
+**EVIDENCE QUALITY** (1-10): Are sources credible? Is conflicting evidence acknowledged? Are limitations clearly stated?
+
+For each dimension, provide: (a) specific score with justification, (b) key strengths, (c) critical weaknesses, (d) specific improvements needed.
+
+Conclude with an overall assessment and the most important insights for revision."""
+
+DEMO_SYNTHESIS_PROMPT = """Based on the original analysis and the detailed critique above, provide a significantly improved response that addresses the major weaknesses while building on the strengths. Your revision should:
+
+1. **Address Critical Gaps**: Directly respond to the highest-priority issues raised in the critique
+2. **Strengthen Evidence**: Incorporate more robust reasoning where the critique identified weaknesses  
+3. **Expand Stakeholder Analysis**: Include previously overlooked perspectives or interests
+4. **Improve Implementation**: Provide more realistic, detailed, and sequenced action steps
+5. **Anticipate Consequences**: Address potential negative outcomes and mitigation strategies
+
+Structure your response with clear headings and provide specific, actionable recommendations. Where uncertainty remains, acknowledge it explicitly and describe how you would gather additional information."""
+
+# Shortened versions for UI display
+SHORT_CRITIQUE_PROMPT = "Please provide a concise, constructive critique of the assistant's reasoning, accuracy, and helpfulness..."
+SHORT_REVIEW_PROMPT = "Based on the critique, provide a revised, improved response..."
+
+# Demo scenarios designed to showcase ensemble LLM capabilities
+DEMO_SCENARIOS = {
+    "Historical Counterfactual": """It's 1947. You're advising the newly formed UN on the Palestine partition plan. You have access to: British Mandate reports, population data, religious significance maps, economic surveys, and testimonies from all parties. Knowing what we know about nation-building, conflict resolution, and regional stability - but constrained by 1947 knowledge and possibilities - what alternative approach might have prevented decades of conflict? Consider: demographic realities, religious significance, economic interdependence, and governance models available in 1947.""",
+    
+    "Scientific Controversy": """Recent studies on intermittent fasting show contradictory results. Study A (n=50,000, 5-year follow-up) shows 23% reduction in cardiovascular events and improved insulin sensitivity. Study B (n=30,000, 2-year follow-up) shows 15% increased eating disorder rates and social dysfunction. Study C (n=15,000, metabolic ward) questions long-term metabolic benefits. Meta-analysis D identifies publication bias favoring positive results. Should major health authorities recommend intermittent fasting for general population health? Consider: study quality, population differences, implementation challenges, and alternative approaches.""",
+    
+    "Urban Development Dilemma": """A mid-sized city faces a critical decision: approve a $2.8B urban redevelopment project that would create 18,000 jobs and modernize aging infrastructure, but requires demolishing the Riverside Historic District - home to 3,200 low-income residents, 40+ small businesses, and buildings dating to the 1880s. Environmental groups cite groundwater contamination risks. Economists argue the project is essential for regional competitiveness. The housing authority reports a 15-year wait list for affordable units. You have 8 months to decide before federal funding expires. What should the city do?"""
+}
+
+# Enhanced prompts for demo impact
+DEMO_CRITIQUE_PROMPT = """Provide a rigorous, multi-dimensional critique of the reasoning and recommendations above. Evaluate:
+
+**ANALYTICAL RIGOR** (1-10): Are assumptions clearly stated? Is evidence properly weighted? Are alternative explanations considered?
+
+**STAKEHOLDER CONSIDERATION** (1-10): Are all affected parties identified? Are power dynamics and competing interests adequately addressed?
+
+**IMPLEMENTATION FEASIBILITY** (1-10): Are practical constraints acknowledged? Are implementation steps realistic and specific?
+
+**UNINTENDED CONSEQUENCES** (1-10): Are potential negative outcomes anticipated? Are feedback loops and system dynamics considered?
+
+**EVIDENCE QUALITY** (1-10): Are sources credible? Is conflicting evidence acknowledged? Are limitations clearly stated?
+
+For each dimension, provide: (a) specific score with justification, (b) key strengths, (c) critical weaknesses, (d) specific improvements needed.
+
+Conclude with an overall assessment and the most important insights for revision."""
+
+DEMO_SYNTHESIS_PROMPT = """Based on the original analysis and the detailed critique above, provide a significantly improved response that addresses the major weaknesses while building on the strengths. Your revision should:
+
+1. **Address Critical Gaps**: Directly respond to the highest-priority issues raised in the critique
+2. **Strengthen Evidence**: Incorporate more robust reasoning where the critique identified weaknesses  
+3. **Expand Stakeholder Analysis**: Include previously overlooked perspectives or interests
+4. **Improve Implementation**: Provide more realistic, detailed, and sequenced action steps
+5. **Anticipate Consequences**: Address potential negative outcomes and mitigation strategies
+
+Structure your response with clear headings and provide specific, actionable recommendations. Where uncertainty remains, acknowledge it explicitly and describe how you would gather additional information."""
 
 # Shortened versions for UI display
 SHORT_CRITIQUE_PROMPT = "Please provide a concise, constructive critique of the assistant's reasoning, accuracy, and helpfulness..."
@@ -617,7 +687,7 @@ with gr.Blocks(
             # Example Questions
             example_questions_dd = gr.Dropdown(
                 choices=list(TEST_CASES.keys()), 
-                label="Example Questions",
+                label="📚 Example Questions (🎯 = Demo Scenarios)",
                 value=list(TEST_CASES.keys())[0]
             )
             
