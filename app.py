@@ -379,9 +379,7 @@ def chat_turn(user_question: str, history: List[dict], primary_model: str, uploa
     history.append({"role": "user", "content": user_question})
     history.append({"role": "assistant", "content": format_bot_message("...", "Response", primary_model)})
     
-    # persist immediately so reload keeps the placeholder turn
-    save_conversation(history)
-
+    # Calculate initial tokens for UI display
     tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
     yield history, gr.update(value=""), _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
 
@@ -390,7 +388,6 @@ def chat_turn(user_question: str, history: List[dict], primary_model: str, uploa
     if not model_info.get("supports_streaming", True):
         wait_message = f"Generating response with {primary_model} (non-streaming). This may take a moment..."
         history[-1]["content"] = format_bot_message(wait_message, "Response", primary_model)
-        save_conversation(history)
         yield history, gr.update(value=""), _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
 
     messages = build_messages_with_context(user_question, history[:-2], uploaded_files)
@@ -398,13 +395,19 @@ def chat_turn(user_question: str, history: List[dict], primary_model: str, uploa
     response_stream = stream_model(messages, primary_model, use_openrouter)
     
     full_response = ""
+    tokens, cost = 0, 0.0  # Initialize to avoid recalculating every chunk
+    
     for chunk in response_stream:
         full_response += chunk
         history[-1]["content"] = format_bot_message(full_response, "Response", primary_model)
-        # persist after each chunk so reload shows progress
-        save_conversation(history)
-        tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
+        
+        # No database saves during streaming - only UI updates
         yield history, gr.update(value=""), _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
+    
+    # Save to database ONLY at the end and calculate final costs
+    save_conversation(history)
+    tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
+    yield history, gr.update(value=""), _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
 
 def handle_critique(history: List[dict], critique_model: str, uploaded_files, critique_prompt: str, use_openrouter: bool) -> Generator:
     """Generates a critique of the conversation."""
@@ -421,18 +424,24 @@ def handle_critique(history: List[dict], critique_model: str, uploaded_files, cr
     
     history.append({"role": "user", "content": "Critique Request"})
     history.append({"role": "assistant", "content": format_bot_message("...", "Critique", critique_model)})
-    save_conversation(history)
     tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
     yield history, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}"), ""
 
-    # streaming loop persists as it progresses
+    # streaming loop with NO database saves during streaming
     critique_response = ""
+    tokens, cost = 0, 0.0  # Initialize to avoid recalculating every chunk
+    
     for chunk in stream_model(critique_messages, critique_model, use_openrouter):
         critique_response += chunk
         history[-1]["content"] = format_bot_message(critique_response, "Critique", critique_model)
-        save_conversation(history)
-        tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
+        
+        # No database saves during streaming - only UI updates
         yield history, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}"), critique_response
+    
+    # Save to database ONLY at the end and calculate final costs
+    save_conversation(history)
+    tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
+    yield history, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}"), critique_response
 
 def handle_review(history: List[dict], primary_model: str, uploaded_files, review_prompt_template: str, last_critique: str, use_openrouter: bool) -> Generator:
     """Generates a revised response based on the last critique."""
@@ -464,17 +473,23 @@ def handle_review(history: List[dict], primary_model: str, uploaded_files, revie
 
     history.append({"role": "user", "content": "Review Request"})
     history.append({"role": "assistant", "content": format_bot_message("...", "Revision", primary_model)})
-    save_conversation(history)
     tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
     yield history, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
 
     revised_response = ""
+    tokens, cost = 0, 0.0  # Initialize to avoid recalculating every chunk
+    
     for chunk in stream_model(review_messages, primary_model, use_openrouter):
         revised_response += chunk
         history[-1]["content"] = format_bot_message(revised_response, "Revision", primary_model)
-        save_conversation(history)
-        tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
+        
+        # No database saves during streaming - only UI updates
         yield history, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
+    
+    # Save to database ONLY at the end and calculate final costs
+    save_conversation(history)
+    tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
+    yield history, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
 
 
 # Human-readable default prompt (edit as you prefer) - Using demo scenario for impact
@@ -494,8 +509,9 @@ DEMO_CRITIQUE_PROMPT = """You are an expert adversarial reasoner tasked with rig
 
 **PART I: SURFACE-LEVEL ANALYSIS**
 Rate each dimension (1-10) with specific justification:
+• **Factual Accuracy**: Are claims supported by evidence? Are facts, statistics, dates, and causal relationships correct? Are there demonstrable errors or misrepresentations?
 • **Logical Coherence**: Internal consistency, valid inferences, premise-conclusion alignment
-• **Evidence Standards**: Source quality, data interpretation, acknowledgment of limitations  
+• **Evidence Quality**: Information reliability, source credibility, data interpretation, acknowledgment of limitations and conflicting evidence
 • **Stakeholder Mapping**: Completeness of affected parties, power dynamics, voice representation
 • **Implementation Realism**: Resource constraints, timeline feasibility, political/social barriers
 • **Unintended Consequences**: Second/third-order effects, feedback loops, systemic interactions
@@ -529,30 +545,33 @@ DEMO_SYNTHESIS_PROMPT = """You are a master synthesizer tasked with transcending
 
 **REQUIRED SYNTHESIS ELEMENTS:**
 
-1. **Reframed Problem Statement**: How does the critique suggest we should understand the core challenge differently?
+1. **Factual Correction & Verification**: Address any factual errors, misrepresentations, or unsupported claims identified in the critique. Provide corrected information with appropriate caveats.
 
-2. **Integrated Evidence Architecture**: Synthesize original evidence with critique insights to build a more robust foundation
+2. **Reframed Problem Statement**: How does the critique suggest we should understand the core challenge differently?
 
-3. **Multi-Stakeholder Harmony**: Develop approaches that address the critique's stakeholder concerns without abandoning feasibility
+3. **Enhanced Evidence Architecture**: Build a more robust foundation by incorporating critique insights, addressing information gaps, and acknowledging conflicting evidence
 
-4. **Adaptive Implementation Strategy**: Create implementation approaches that anticipate and adapt to the consequences identified in the critique
+4. **Multi-Stakeholder Harmony**: Develop approaches that address the critique's stakeholder concerns without abandoning feasibility
 
-5. **Epistemic Humility Framework**: Explicitly acknowledge key uncertainties and build learning/adjustment mechanisms into recommendations
+5. **Adaptive Implementation Strategy**: Create implementation approaches that anticipate and adapt to the consequences identified in the critique
 
-6. **Alternative Scenario Planning**: Address the critique's concerns about different future contexts or assumption failures
+6. **Epistemic Humility Framework**: Explicitly acknowledge key uncertainties, areas of ignorance, and build learning/adjustment mechanisms into recommendations
+
+7. **Alternative Scenario Planning**: Address the critique's concerns about different future contexts or assumption failures
 
 **OUTPUT STRUCTURE:**
 - **Executive Synthesis**: 2-3 sentences capturing how your thinking has fundamentally evolved
+- **Factual Clarifications**: Any corrections to errors or misrepresentations in the original response
 - **Transformed Analysis**: Your new understanding of the situation incorporating critique insights
 - **Refined Recommendations**: Specific actions that address both original goals and critique concerns
 - **Uncertainty Map**: Key unknowns and how you'll gather information/adapt as you learn
 - **Success/Failure Indicators**: How you'll know if your approach is working or needs revision
 
-Remember: The goal is not to defend the original analysis or simply fix its flaws, but to achieve a higher level of understanding that incorporates the wisdom from both perspectives."""
+Remember: The goal is not to defend the original analysis or simply fix its flaws, but to achieve a higher level of understanding that incorporates the wisdom from both perspectives. Accuracy is paramount - admit when you don't know something rather than making unsupported claims."""
 
 # Shortened versions for UI display
-SHORT_CRITIQUE_PROMPT = "Please provide a concise, constructive critique of the assistant's reasoning, accuracy, and helpfulness..."
-SHORT_REVIEW_PROMPT = "Based on the critique, provide a revised, improved response..."
+SHORT_CRITIQUE_PROMPT = "Please provide a concise, constructive critique focusing on: factual accuracy, logical reasoning, evidence quality, and practical feasibility..."
+SHORT_REVIEW_PROMPT = "Based on the critique, provide a revised response that corrects any errors and addresses the identified concerns..."
 
 # Demo scenarios designed to showcase ensemble LLM capabilities
 DEMO_SCENARIOS = {
@@ -562,10 +581,6 @@ DEMO_SCENARIOS = {
     
     "Urban Development Dilemma": """A mid-sized city faces a critical decision: approve a $2.8B urban redevelopment project that would create 18,000 jobs and modernize aging infrastructure, but requires demolishing the Riverside Historic District - home to 3,200 low-income residents, 40+ small businesses, and buildings dating to the 1880s. Environmental groups cite groundwater contamination risks. Economists argue the project is essential for regional competitiveness. The housing authority reports a 15-year wait list for affordable units. You have 8 months to decide before federal funding expires. What should the city do?"""
 }
-
-# Shortened versions for UI display
-SHORT_CRITIQUE_PROMPT = "Please provide a concise, constructive critique of the assistant's reasoning, accuracy, and helpfulness..."
-SHORT_REVIEW_PROMPT = "Based on the critique, provide a revised, improved response..."
 
 with gr.Blocks(
     title="Discursus",

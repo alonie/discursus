@@ -27,10 +27,21 @@ class MongoDBPersistence:
         self._connect()
     
     def _connect(self):
-        """Establish connection to MongoDB."""
+        """Establish connection to MongoDB with optimized settings."""
         try:
-            self.client = MongoClient(self.connection_string)
-            # Test connection
+            # Optimized connection settings for better performance
+            self.client = MongoClient(
+                self.connection_string,
+                maxPoolSize=10,  # Connection pool size
+                minPoolSize=1,   # Minimum connections
+                maxIdleTimeMS=30000,  # Close connections after 30s idle
+                serverSelectionTimeoutMS=5000,  # 5s timeout for server selection
+                socketTimeoutMS=10000,  # 10s socket timeout
+                connectTimeoutMS=5000,  # 5s connection timeout
+                retryWrites=True,
+                w='majority'  # Write concern for data safety
+            )
+            # Test connection with shorter timeout
             self.client.admin.command('ping')
             
             # Use 'discursus' database
