@@ -451,7 +451,9 @@ def handle_critique(history: List[dict], critique_model: str, uploaded_files, cr
         yield history, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}"), ""
         return
 
-    critique_messages = build_messages_with_context(critique_prompt, history, uploaded_files)
+    # Use full prompt if user hasn't customized it (still shows short version)
+    actual_prompt = FULL_CRITIQUE_PROMPT if critique_prompt == SHORT_CRITIQUE_PROMPT else critique_prompt
+    critique_messages = build_messages_with_context(actual_prompt, history, uploaded_files)
     
     history.append({"role": "user", "content": "Critique Request"})
     history.append({"role": "assistant", "content": format_bot_message("...", "Critique", critique_model)})
@@ -491,7 +493,9 @@ def handle_review(history: List[dict], primary_model: str, uploaded_files, revie
         yield history, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
         return
 
-    review_prompt = f"{review_prompt_template}\n\n--- CRITIQUE ---\n{last_critique}\n--- END CRITIQUE ---"
+    # Use full prompt if user hasn't customized it (still shows short version)
+    actual_template = FULL_REVIEW_PROMPT if review_prompt_template == SHORT_REVIEW_PROMPT else review_prompt_template
+    review_prompt = f"{actual_template}\n\n--- CRITIQUE ---\n{last_critique}\n--- END CRITIQUE ---"
     review_messages = build_messages_with_context(review_prompt, history, uploaded_files)
 
     history.append({"role": "user", "content": "Review Request"})
@@ -519,6 +523,28 @@ POLYCOMB_PROMPT = (
     "Analyze the economic, social, and practical implications, considering both short-term impacts and long-term "
     "consequences for the city, its employees, and its residents."
 )
+
+# Full prompts sent to LLMs (not displayed in UI)
+FULL_CRITIQUE_PROMPT = (
+    "Please provide a concise, constructive critique of the assistant's reasoning, accuracy, and helpfulness "
+    "throughout the preceding conversation. Identify any potential biases, logical fallacies, or missed "
+    "opportunities for a more comprehensive response. Be extremely critical of citations and confirm or refute "
+    "each specific citation, as existing or hallucinated, and then as relevant or not. Provide a clear "
+    "assessment of each and every citation and mark each with a Status icon (green existing/red hallucinated) "
+    "+ explanation and a Relevance icon (red 'X', or an orange, or yellow or green) + explanation. On this "
+    "basis, and the overall assessment of the response, provide an overall critique rating out of 10 for the response."
+)
+
+FULL_REVIEW_PROMPT = (
+    "Based on the entire conversation history and the following critique, please provide a revised, improved "
+    "version of your last response. Synthesize the critique into your reasoning and address any shortcomings "
+    "identified. Ensure that your revised response is more accurate, comprehensive, and helpful than the "
+    "original while maintaining clarity and readability."
+)
+
+# Shortened versions for UI display
+SHORT_CRITIQUE_PROMPT = "Please provide a concise, constructive critique of the assistant's reasoning, accuracy, and helpfulness..."
+SHORT_REVIEW_PROMPT = "Based on the critique, provide a revised, improved response..."
 
 with gr.Blocks(
     title="Discursus",
@@ -577,120 +603,124 @@ with gr.Blocks(
                 "</div>",
                 elem_id="cost-box"
             )
-    # Advanced accordion wraps the rest of the controls that were previously above the chatbot
-    with gr.Accordion("Advanced", open=False):
-        with gr.Row():
-            primary_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Gemini 2.5 Flash", label="Primary Model", scale=3)
-            critique_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Claude 4.5 Sonnet", label="Critique Model", scale=3)
-            api_provider_switch = gr.Checkbox(label="Use OpenRouter", value=True, scale=1)
-            view_context_btn = gr.Button("View Context", scale=1)
-            summarize_btn = gr.Button("Summarise Context", scale=1)
-
-        # Session controls (persistence)
-        with gr.Row():
-            session_dropdown = gr.Dropdown(choices=list_sessions(), label="Saved Sessions", value=list_sessions()[0] if list_sessions() else "")
-            session_name_input = gr.Textbox(label="Session name", placeholder="Enter name to save current conversation")
-            save_session_btn = gr.Button("Save Session")
-            load_session_btn = gr.Button("Load Session")
-            delete_session_btn = gr.Button("Delete Session")
-            new_session_btn = gr.Button("New Session")
-            autosave_checkbox = gr.Checkbox(label="Auto-save to selected session", value=read_autosave_flag())
-
-        with gr.Column(visible=False) as context_viewer_col:
-            with gr.Row():
-                gr.Markdown("### Conversation Context")
-            with gr.Row():
-                context_display = gr.Markdown()
-            with gr.Row():
-                download_file_btn = gr.File(label="Download Full Conversation", interactive=False)
-                close_context_btn = gr.Button("Close")
-
-        with gr.Row():
+    
+    # MAIN LAYOUT: Side-by-side conversation and controls
+    with gr.Row():
+        # LEFT COLUMN: Conversation (main focus)
+        with gr.Column(scale=7, min_width=400):
+            chatbot = gr.Chatbot(label="Conversation", height=700, type="messages")
+        
+        # RIGHT COLUMN: All controls always visible
+        with gr.Column(scale=3, min_width=350):
+            # Example Questions
             example_questions_dd = gr.Dropdown(
                 choices=list(TEST_CASES.keys()), 
-                label="Select an Example Question",
-                value=list(TEST_CASES.keys())[0] # Default to first test case
+                label="Example Questions",
+                value=list(TEST_CASES.keys())[0]
             )
-
-        with gr.Row():
-            with gr.Column(scale=10):
-                user_input = gr.Textbox(show_label=False, value=POLYCOMB_PROMPT, placeholder="Select an example or enter a custom question...", lines=4)
-            with gr.Column(scale=1, min_width=80):
-                send_btn = gr.Button("Send", variant="primary")
-            with gr.Column(scale=1, min_width=120):
-                upload_btn = gr.UploadButton("📎 Upload Files", file_count="multiple", file_types=["text", ".md", ".py", ".csv", ".json"])
-
-        gr.Markdown("---")
-        gr.Markdown("### Critique & Review Workflow")
-        
-        with gr.Row():
-            with gr.Column():
-                critique_btn = gr.Button("Generate Critique", variant="secondary")
-                critique_prompt_textbox = gr.Textbox(
-                    label="Critique Prompt",
-                    lines=5,
-                    value=(
-                        "Please provide a concise, constructive critique of the assistant's reasoning, accuracy, and helpfulness..."
-                    )
+            
+            # Input Section
+            gr.Markdown("### Send Message")
+            user_input = gr.Textbox(
+                label="Your Question", 
+                value=POLYCOMB_PROMPT, 
+                placeholder="Enter your question...", 
+                lines=3
+            )
+            
+            with gr.Row():
+                send_model_dropdown = gr.Dropdown(
+                    choices=list(MODEL_MAP.keys()), 
+                    value="Gemini 2.5 Flash", 
+                    label="Model",
+                    scale=2
                 )
-            with gr.Column():
-                review_btn = gr.Button("Generate Revision", variant="secondary")
-                review_prompt_textbox = gr.Textbox(
-                    label="Review Prompt Template",
-                    lines=5,
-                    value="Based on the entire conversation history and the following critique, please provide a revised, improved version of your last response."
+                send_btn = gr.Button("Send", variant="primary", scale=1)
+            
+            upload_btn = gr.UploadButton(
+                "📎 Upload Files", 
+                file_count="multiple", 
+                file_types=["text", ".md", ".py", ".csv", ".json"],
+                size="sm"
+            )
+            
+            gr.Markdown("---")
+            
+            # Critique Section
+            gr.Markdown("### Critique")
+            with gr.Row():
+                critique_model_dropdown = gr.Dropdown(
+                    choices=list(MODEL_MAP.keys()), 
+                    value="Claude 4.5 Sonnet", 
+                    label="Model",
+                    scale=2
                 )
-
-        reset_btn = gr.Button("🔄 New Conversation")
-
-    # Chatbot remains visible below Advanced
-    chatbot = gr.Chatbot(label="Conversation", height=600, type="messages")
-
-    with gr.Row():
-        example_questions_dd = gr.Dropdown(
-            choices=list(TEST_CASES.keys()), 
-            label="Select an Example Question",
-            value=list(TEST_CASES.keys())[0] # Default to 'Custom Question'
-        )
-
-    with gr.Row():
-        with gr.Column(scale=10):
-            user_input = gr.Textbox(show_label=False, value=POLYCOMB_PROMPT, placeholder="Select an example or enter a custom question...", lines=4)
-        with gr.Column(scale=1, min_width=80):
-            send_btn = gr.Button("Send", variant="primary")
-        with gr.Column(scale=1, min_width=120):
-             upload_btn = gr.UploadButton("📎 Upload Files", file_count="multiple", file_types=["text", ".md", ".py", ".csv", ".json"])
-
-
-    gr.Markdown("---")
-    gr.Markdown("### Critique & Review Workflow")
-    
-    with gr.Row():
-        with gr.Column():
-            critique_btn = gr.Button("Generate Critique", variant="secondary")
+                critique_btn = gr.Button("Critique", variant="secondary", scale=1)
+            
             critique_prompt_textbox = gr.Textbox(
                 label="Critique Prompt",
-                lines=5,
-                value=(
-                    "Please provide a concise, constructive critique of the assistant's reasoning, accuracy, and helpfulness throughout the preceding conversation. "
-                    "Identify any potential biases, logical fallacies, or missed opportunities for a more comprehensive response. "
-                    "Be extremely critical of citations and confirm or refute each specific citation, as existing or hallucinated, and then as relevant or not. "
-                    "Provide a clear assessment of each and every citation and mark each with a Status icon (green existing/red hallucinated) + explanation "
-                    "and a Relevance icon (red 'X', or an orange, or yellow or green) + explanation. "
-                    "On this basis, and the overall assessment of the response, provide an overall critique rating out of 10 for the response."
+                lines=3,
+                value=SHORT_CRITIQUE_PROMPT,
+                placeholder="Customize critique instructions..."
+            )
+            gr.Markdown("*Default uses detailed critique prompt. Edit to customize.*", elem_classes=["text-xs", "text-gray-500"])
+            
+            gr.Markdown("---")
+            
+            # Review Section  
+            gr.Markdown("### Revise")
+            with gr.Row():
+                review_model_dropdown = gr.Dropdown(
+                    choices=list(MODEL_MAP.keys()), 
+                    value="Gemini 2.5 Flash", 
+                    label="Model",
+                    scale=2
                 )
-            )
-        with gr.Column():
-            review_btn = gr.Button("Generate Revision", variant="secondary")
+                review_btn = gr.Button("Revise", variant="secondary", scale=1)
+            
             review_prompt_textbox = gr.Textbox(
-                label="Review Prompt Template",
-                lines=5,
-                value="Based on the entire conversation history and the following critique, please provide a revised, improved version of your last response. " \
-                "Synthesize the critique into your reasoning and address any shortcomings identified."
+                label="Review Prompt",
+                lines=3,
+                value=SHORT_REVIEW_PROMPT,
+                placeholder="Customize revision instructions..."
             )
+            gr.Markdown("*Default uses detailed review prompt. Edit to customize.*", elem_classes=["text-xs", "text-gray-500"])
+            
+            gr.Markdown("---")
+            
+            # Quick Actions
+            with gr.Row():
+                reset_btn = gr.Button("🔄 New", variant="stop", scale=1)
+                view_context_btn = gr.Button("📄 Context", scale=1)
+                summarize_btn = gr.Button("📝 Summarize", scale=1)
+            
+            # Settings Accordion (collapsed but always accessible)
+            with gr.Accordion("Settings", open=False):
+                # Global Model Settings (for sync)
+                primary_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Gemini 2.5 Flash", label="Default Primary Model")
+                critique_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Claude 4.5 Sonnet", label="Default Critique Model")
+                api_provider_switch = gr.Checkbox(label="Use OpenRouter", value=True)
+                
+                # Session Management
+                gr.Markdown("**Sessions**")
+                session_dropdown = gr.Dropdown(choices=list_sessions(), label="Saved Sessions", value=list_sessions()[0] if list_sessions() else "")
+                session_name_input = gr.Textbox(label="Session Name", placeholder="Enter name to save...")
+                
+                with gr.Row():
+                    save_session_btn = gr.Button("Save", size="sm", scale=1)
+                    load_session_btn = gr.Button("Load", size="sm", scale=1)
+                    delete_session_btn = gr.Button("Delete", size="sm", scale=1)
+                    new_session_btn = gr.Button("New", size="sm", scale=1)
+                
+                autosave_checkbox = gr.Checkbox(label="Auto-save to selected session", value=read_autosave_flag())
 
-        reset_btn = gr.Button("🔄 New Conversation")
-
+    # Context Viewer (hidden by default, overlays when opened)
+    with gr.Column(visible=False) as context_viewer_col:
+        gr.Markdown("### Conversation Context")
+        context_display = gr.Markdown()
+        with gr.Row():
+            download_file_btn = gr.File(label="Download Conversation", interactive=False)
+            close_context_btn = gr.Button("Close Context Viewer")
 
     file_state = gr.State([])
     last_critique_state = gr.State("")
@@ -699,11 +729,30 @@ with gr.Blocks(
         """Updates the user input textbox when an example is selected."""
         return gr.update(value=TEST_CASES.get(example_title, ""))
 
+    # Sync model selections between advanced and per-action dropdowns
+    def sync_primary_to_send(model):
+        return gr.update(value=model)
+    
+    def sync_send_to_primary(model):
+        return gr.update(value=model)
+    
+    def sync_critique_to_critique(model):
+        return gr.update(value=model)
+    
+    def sync_critique_action_to_critique(model):
+        return gr.update(value=model)
+
     example_questions_dd.change(
         fn=update_input_from_example,
         inputs=[example_questions_dd],
         outputs=[user_input]
     )
+
+    # Sync model selections
+    primary_model.change(sync_primary_to_send, [primary_model], [send_model_dropdown])
+    send_model_dropdown.change(sync_send_to_primary, [send_model_dropdown], [primary_model])
+    critique_model.change(sync_critique_to_critique, [critique_model], [critique_model_dropdown])
+    critique_model_dropdown.change(sync_critique_action_to_critique, [critique_model_dropdown], [critique_model])
 
     def handle_view_context(history: List[dict]):
         """Formats the conversation history for viewing and downloading."""
@@ -830,25 +879,25 @@ with gr.Blocks(
 
     send_btn.click(
         handle_send,
-        [user_input, chatbot, primary_model, file_state, api_provider_switch],
+        [user_input, chatbot, send_model_dropdown, file_state, api_provider_switch],
         [chatbot, user_input, token_count_display, cost_display]
     )
 
     user_input.submit(
         handle_send,
-        [user_input, chatbot, primary_model, file_state, api_provider_switch],
+        [user_input, chatbot, send_model_dropdown, file_state, api_provider_switch],
         [chatbot, user_input, token_count_display, cost_display]
     )
 
     critique_btn.click(
         handle_critique,
-        [chatbot, critique_model, file_state, critique_prompt_textbox, api_provider_switch],
+        [chatbot, critique_model_dropdown, file_state, critique_prompt_textbox, api_provider_switch],
         [chatbot, token_count_display, cost_display, last_critique_state]
     )
 
     review_btn.click(
         handle_review,
-        [chatbot, primary_model, file_state, review_prompt_textbox, last_critique_state, api_provider_switch],
+        [chatbot, review_model_dropdown, file_state, review_prompt_textbox, last_critique_state, api_provider_switch],
         [chatbot, token_count_display, cost_display]
     )
 
