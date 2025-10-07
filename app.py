@@ -295,12 +295,18 @@ DEMO_SCENARIOS = {
 # Load test cases at startup from the new file
 TEST_CASES = load_test_cases("content/4domains_3complexity_16testcases_4Oct25.json")
 
-# Add demo scenarios to showcase ensemble capabilities  
-TEST_CASES.update({
+# Add demo scenarios to showcase ensemble capabilities - put them first for visibility
+demo_cases = {
     "🎯 DEMO: Historical Counterfactual": DEMO_SCENARIOS["Historical Counterfactual"],
     "🎯 DEMO: Scientific Controversy": DEMO_SCENARIOS["Scientific Controversy"], 
     "🎯 DEMO: Urban Development": DEMO_SCENARIOS["Urban Development Dilemma"]
-})
+}
+
+# Create new ordered dict with demos first
+ordered_cases = {}
+ordered_cases.update(demo_cases)
+ordered_cases.update(TEST_CASES)
+TEST_CASES = ordered_cases
 
 print(f"DEBUG: Total test cases loaded: {len(TEST_CASES)}")
 print(f"DEBUG: Demo scenarios: {[k for k in TEST_CASES.keys() if '🎯' in k]}")
@@ -545,32 +551,66 @@ DEMO_SCENARIOS = {
     "Urban Development Dilemma": """A mid-sized city faces a critical decision: approve a $2.8B urban redevelopment project that would create 18,000 jobs and modernize aging infrastructure, but requires demolishing the Riverside Historic District - home to 3,200 low-income residents, 40+ small businesses, and buildings dating to the 1880s. Environmental groups cite groundwater contamination risks. Economists argue the project is essential for regional competitiveness. The housing authority reports a 15-year wait list for affordable units. You have 8 months to decide before federal funding expires. What should the city do?"""
 }
 
-# Enhanced prompts for demo impact
-DEMO_CRITIQUE_PROMPT = """Provide a rigorous, multi-dimensional critique of the reasoning and recommendations above. Evaluate:
+# Enhanced deliberative reasoning prompts for sophisticated ensemble LLM capabilities
+DEMO_CRITIQUE_PROMPT = """You are an expert adversarial reasoner tasked with rigorously examining the preceding response. Your goal is not just evaluation, but intellectual transformation through deep scrutiny.
 
-**ANALYTICAL RIGOR** (1-10): Are assumptions clearly stated? Is evidence properly weighted? Are alternative explanations considered?
+**PART I: SURFACE-LEVEL ANALYSIS**
+Rate each dimension (1-10) with specific justification:
+• **Logical Coherence**: Internal consistency, valid inferences, premise-conclusion alignment
+• **Evidence Standards**: Source quality, data interpretation, acknowledgment of limitations  
+• **Stakeholder Mapping**: Completeness of affected parties, power dynamics, voice representation
+• **Implementation Realism**: Resource constraints, timeline feasibility, political/social barriers
+• **Unintended Consequences**: Second/third-order effects, feedback loops, systemic interactions
 
-**STAKEHOLDER CONSIDERATION** (1-10): Are all affected parties identified? Are power dynamics and competing interests adequately addressed?
+**PART II: DEEP COGNITIVE EXAMINATION**
+• **Cognitive Biases**: What systematic thinking errors are present? (confirmation bias, availability heuristic, anchoring, etc.)
+• **Epistemic Blind Spots**: What crucial unknowns are being treated as knowns? Where is false certainty masquerading as analysis?
+• **Frame Examination**: What assumptions about the problem definition itself may be flawed? Are we solving the right problem?
+• **Alternative Paradigms**: What fundamentally different ways of understanding this situation are being ignored?
 
-**IMPLEMENTATION FEASIBILITY** (1-10): Are practical constraints acknowledged? Are implementation steps realistic and specific?
+**PART III: ADVERSARIAL CHALLENGE**
+• **Steel-manning Opposition**: What is the strongest possible case against this recommendation?
+• **Assumption Inversion**: What if the core assumptions were reversed - how would that change everything?
+• **Temporal Perspectives**: How might this look catastrophically wrong in 5/20/50 years?
+• **Stakeholder Role-Play**: Argue from the perspective of the three most disadvantaged groups
 
-**UNINTENDED CONSEQUENCES** (1-10): Are potential negative outcomes anticipated? Are feedback loops and system dynamics considered?
+**PART IV: META-REASONING**
+• **Process Critique**: What flaws exist in HOW this reasoning was conducted, not just the conclusions?
+• **Information Architecture**: What critical information is missing that would fundamentally alter the analysis?
+• **Uncertainty Quantification**: Where should we be much more uncertain than the response suggests?
 
-**EVIDENCE QUALITY** (1-10): Are sources credible? Is conflicting evidence acknowledged? Are limitations clearly stated?
+Conclude with: (1) The single most dangerous flaw in this reasoning, (2) The most important question that remains unasked, (3) A completely different framing that might yield superior insights."""
 
-For each dimension, provide: (a) specific score with justification, (b) key strengths, (c) critical weaknesses, (d) specific improvements needed.
+DEMO_SYNTHESIS_PROMPT = """You are a master synthesizer tasked with transcending the original analysis through deep integration of critique insights. This is not mere revision—it's intellectual evolution.
 
-Conclude with an overall assessment and the most important insights for revision."""
+**SYNTHESIS PRINCIPLES:**
+• **Integration over Addition**: Don't just append critique points; weave them into a fundamentally transformed understanding
+• **Tension Resolution**: Where the critique reveals legitimate competing values/perspectives, develop sophisticated approaches that honor multiple valid concerns
+• **Emergent Insights**: Look for new understanding that emerges from the interaction between original reasoning and critique
+• **Uncertainty Embrace**: Be comfortable with irreducible uncertainties; make them productive rather than paralyzing
 
-DEMO_SYNTHESIS_PROMPT = """Based on the original analysis and the detailed critique above, provide a significantly improved response that addresses the major weaknesses while building on the strengths. Your revision should:
+**REQUIRED SYNTHESIS ELEMENTS:**
 
-1. **Address Critical Gaps**: Directly respond to the highest-priority issues raised in the critique
-2. **Strengthen Evidence**: Incorporate more robust reasoning where the critique identified weaknesses  
-3. **Expand Stakeholder Analysis**: Include previously overlooked perspectives or interests
-4. **Improve Implementation**: Provide more realistic, detailed, and sequenced action steps
-5. **Anticipate Consequences**: Address potential negative outcomes and mitigation strategies
+1. **Reframed Problem Statement**: How does the critique suggest we should understand the core challenge differently?
 
-Structure your response with clear headings and provide specific, actionable recommendations. Where uncertainty remains, acknowledge it explicitly and describe how you would gather additional information."""
+2. **Integrated Evidence Architecture**: Synthesize original evidence with critique insights to build a more robust foundation
+
+3. **Multi-Stakeholder Harmony**: Develop approaches that address the critique's stakeholder concerns without abandoning feasibility
+
+4. **Adaptive Implementation Strategy**: Create implementation approaches that anticipate and adapt to the consequences identified in the critique
+
+5. **Epistemic Humility Framework**: Explicitly acknowledge key uncertainties and build learning/adjustment mechanisms into recommendations
+
+6. **Alternative Scenario Planning**: Address the critique's concerns about different future contexts or assumption failures
+
+**OUTPUT STRUCTURE:**
+- **Executive Synthesis**: 2-3 sentences capturing how your thinking has fundamentally evolved
+- **Transformed Analysis**: Your new understanding of the situation incorporating critique insights
+- **Refined Recommendations**: Specific actions that address both original goals and critique concerns
+- **Uncertainty Map**: Key unknowns and how you'll gather information/adapt as you learn
+- **Success/Failure Indicators**: How you'll know if your approach is working or needs revision
+
+Remember: The goal is not to defend the original analysis or simply fix its flaws, but to achieve a higher level of understanding that incorporates the wisdom from both perspectives."""
 
 # Shortened versions for UI display
 SHORT_CRITIQUE_PROMPT = "Please provide a concise, constructive critique of the assistant's reasoning, accuracy, and helpfulness..."
@@ -584,33 +624,6 @@ DEMO_SCENARIOS = {
     
     "Urban Development Dilemma": """A mid-sized city faces a critical decision: approve a $2.8B urban redevelopment project that would create 18,000 jobs and modernize aging infrastructure, but requires demolishing the Riverside Historic District - home to 3,200 low-income residents, 40+ small businesses, and buildings dating to the 1880s. Environmental groups cite groundwater contamination risks. Economists argue the project is essential for regional competitiveness. The housing authority reports a 15-year wait list for affordable units. You have 8 months to decide before federal funding expires. What should the city do?"""
 }
-
-# Enhanced prompts for demo impact
-DEMO_CRITIQUE_PROMPT = """Provide a rigorous, multi-dimensional critique of the reasoning and recommendations above. Evaluate:
-
-**ANALYTICAL RIGOR** (1-10): Are assumptions clearly stated? Is evidence properly weighted? Are alternative explanations considered?
-
-**STAKEHOLDER CONSIDERATION** (1-10): Are all affected parties identified? Are power dynamics and competing interests adequately addressed?
-
-**IMPLEMENTATION FEASIBILITY** (1-10): Are practical constraints acknowledged? Are implementation steps realistic and specific?
-
-**UNINTENDED CONSEQUENCES** (1-10): Are potential negative outcomes anticipated? Are feedback loops and system dynamics considered?
-
-**EVIDENCE QUALITY** (1-10): Are sources credible? Is conflicting evidence acknowledged? Are limitations clearly stated?
-
-For each dimension, provide: (a) specific score with justification, (b) key strengths, (c) critical weaknesses, (d) specific improvements needed.
-
-Conclude with an overall assessment and the most important insights for revision."""
-
-DEMO_SYNTHESIS_PROMPT = """Based on the original analysis and the detailed critique above, provide a significantly improved response that addresses the major weaknesses while building on the strengths. Your revision should:
-
-1. **Address Critical Gaps**: Directly respond to the highest-priority issues raised in the critique
-2. **Strengthen Evidence**: Incorporate more robust reasoning where the critique identified weaknesses  
-3. **Expand Stakeholder Analysis**: Include previously overlooked perspectives or interests
-4. **Improve Implementation**: Provide more realistic, detailed, and sequenced action steps
-5. **Anticipate Consequences**: Address potential negative outcomes and mitigation strategies
-
-Structure your response with clear headings and provide specific, actionable recommendations. Where uncertainty remains, acknowledge it explicitly and describe how you would gather additional information."""
 
 # Shortened versions for UI display
 SHORT_CRITIQUE_PROMPT = "Please provide a concise, constructive critique of the assistant's reasoning, accuracy, and helpfulness..."
