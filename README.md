@@ -127,12 +127,26 @@ The models available in the dropdowns are defined in the `MODEL_MAP` dictionary 
 // filepath: app.py
 // ...existing code...
 MODEL_MAP = {
-    "GPT-4o": {
-        "id": "openai/gpt-4o",
+    "GPT-5.2": {
+        "id": "openai/gpt-5.2",
         "provider": "openai",
-        "native_id": "gpt-4o",
-        "input_cost_pm": 5.0,
-        "output_cost_pm": 15.0
+        "native_id": "gpt-5.2",
+        "input_cost_pm": 1.75,
+        "output_cost_pm": 14.0
+    },
+    "GPT-5.2 Pro": {
+        "id": "openai/gpt-5.2-pro",
+        "provider": "openai",
+        "native_id": "gpt-5.2-pro",
+        "input_cost_pm": 1.75,
+        "output_cost_pm": 14.0
+    },
+    "Gemini 3 Flash Preview": {
+        "id": "google/gemini-3-flash-preview",
+        "provider": "google",
+        "native_id": "gemini-3-flash-preview",
+        "input_cost_pm": 0.5,
+        "output_cost_pm": 3.0
     },
     // Add your custom model here
 }

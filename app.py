@@ -254,6 +254,8 @@ print(f"DEBUG: First 5 keys: {list(TEST_CASES.keys())[:5]}")
 MODEL_MAP = {
     # Hypothetical
     "GPT-5":           {"id": "openai/gpt-5",           "provider": "openai", "native_id": "gpt-5", "input_cost_pm": 10.0, "output_cost_pm": 30.0},
+    "GPT-5.2":         {"id": "openai/gpt-5.2",         "provider": "openai", "native_id": "gpt-5.2", "input_cost_pm": 1.75, "output_cost_pm": 14.0},
+    "GPT-5.2 Pro":     {"id": "openai/gpt-5.2-pro",     "provider": "openai", "native_id": "gpt-5.2-pro", "input_cost_pm": 1.75, "output_cost_pm": 14.0},
     "GPT-5 Mini":      {"id": "openai/gpt-5-mini",      "provider": "openai", "native_id": "gpt-5-mini", "input_cost_pm": 0.5,  "output_cost_pm": 1.5},
     # Real
     "Claude 4.5 Sonnet": {"id": "anthropic/claude-4.5-sonnet", "provider": "anthropic", "native_id": "claude-4.5-sonnet", "input_cost_pm": 5.0, "output_cost_pm": 25.0},
@@ -263,6 +265,7 @@ MODEL_MAP = {
     "GPT-4o Mini":     {"id": "openai/gpt-4o-mini",     "provider": "openai", "native_id": "gpt-4o-mini", "input_cost_pm": 0.15, "output_cost_pm": 0.6},
     "Gemini 2.5 Pro":  {"id": "google/gemini-2.5-pro",  "provider": "google", "native_id": "gemini-2.5-pro", "input_cost_pm": 5.0, "output_cost_pm": 15.0},
     "Gemini 2.5 Flash":{"id": "google/gemini-2.5-flash","provider": "google", "native_id": "gemini-2.5-flash", "input_cost_pm": 0.35, "output_cost_pm": 0.7},
+    "Gemini 3 Flash Preview":{"id": "google/gemini-3-flash-preview", "provider": "google", "native_id": "gemini-3-flash-preview", "input_cost_pm": 0.5, "output_cost_pm": 3.0},
 }
 
 def process_uploaded_files(files) -> str:
@@ -669,7 +672,7 @@ with gr.Blocks(
             with gr.Row():
                 send_model_dropdown = gr.Dropdown(
                     choices=list(MODEL_MAP.keys()), 
-                    value="Gemini 2.5 Flash", 
+                    value="GPT-5 Mini", 
                     label="Model",
                     scale=2
                 )
@@ -710,7 +713,7 @@ with gr.Blocks(
             with gr.Row():
                 review_model_dropdown = gr.Dropdown(
                     choices=list(MODEL_MAP.keys()), 
-                    value="Gemini 2.5 Flash", 
+                    value="Gemini 3 Flash Preview", 
                     label="Model",
                     scale=2
                 )
@@ -735,7 +738,7 @@ with gr.Blocks(
             # Settings Accordion (collapsed but always accessible)
             with gr.Accordion("Settings", open=False):
                 # Global Model Settings (for sync)
-                primary_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Gemini 2.5 Flash", label="Default Primary Model")
+                primary_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="GPT-5 Mini", label="Default Primary Model")
                 critique_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Claude 4.5 Sonnet", label="Default Critique Model")
                 api_provider_switch = gr.Checkbox(label="Use OpenRouter", value=True)
                 

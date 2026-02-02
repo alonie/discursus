@@ -2,5 +2,12 @@
   "name": "discursus",
   "image": "mcr.microsoft.com/devcontainers/python:3.12",
   "postCreateCommand": "python -m pip install --upgrade pip && pip install -r /workspaces/discursus/requirements.txt",
-  "remoteUser": "vscode"
+  "remoteUser": "vscode",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "openai.chatgpt"
+      ]
+    }
+  }
 }
