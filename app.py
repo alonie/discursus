@@ -492,14 +492,14 @@ def chat_turn(user_question: str, history: List[dict], primary_model: str, uploa
     
     # Calculate initial tokens for UI display
     tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
-    yield history, gr.update(value=""), _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
+    yield history, gr.update(value="", placeholder=""), _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
 
     # Provide immediate feedback for non-streaming models
     model_info = MODEL_MAP[primary_model]
     if not model_info.get("supports_streaming", True):
         wait_message = f"Generating response with {primary_model} (non-streaming). This may take a moment..."
         history[-1]["content"] = format_bot_message(wait_message, "Response", primary_model)
-        yield history, gr.update(value=""), _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
+        yield history, gr.update(value="", placeholder=""), _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
 
     messages = build_messages_with_context(user_question, history[:-2], uploaded_files)
     
@@ -513,12 +513,12 @@ def chat_turn(user_question: str, history: List[dict], primary_model: str, uploa
         history[-1]["content"] = format_bot_message(full_response, "Response", primary_model)
         
         # No database saves during streaming - only UI updates
-        yield history, gr.update(value=""), _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
+        yield history, gr.update(value="", placeholder=""), _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
     
     # Save to database ONLY at the end and calculate final costs
     save_conversation(history)
     tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
-    yield history, gr.update(value=""), _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
+    yield history, gr.update(value="", placeholder=""), _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
 
 def handle_critique(history: List[dict], critique_model: str, uploaded_files, critique_prompt: str, use_openrouter: bool) -> Generator:
     """Generates a critique of the conversation."""
@@ -852,7 +852,7 @@ with gr.Blocks(
             question = (POLYCOMB_PROMPT or "").strip()
         if not question:
             tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
-            return history, gr.update(value=""), _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
+            return history, gr.update(value="", placeholder=""), _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
         yield from chat_turn(question, history, p_model, files, use_openrouter)
 
     def handle_upload(files):
@@ -922,7 +922,7 @@ with gr.Blocks(
         except Exception:
             pass
         tokens, cost = calculate_cost_and_tokens(hist, MODEL_MAP)
-        return hist, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
+        return hist, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}"), gr.update(value="", placeholder="")
 
     def delete_session_handler(name: str):
         delete_session(name)
@@ -935,7 +935,7 @@ with gr.Blocks(
         return [], gr.update(value=""), gr.update(value=""), "0", "$0.0000", gr.update(choices=[], value=[])
 
     save_session_btn.click(save_session_handler, [session_name_input, chatbot], [session_dropdown, session_name_input])
-    load_session_btn.click(load_session_handler, [session_dropdown], [chatbot, token_count_display, cost_display])
+    load_session_btn.click(load_session_handler, [session_dropdown], [chatbot, token_count_display, cost_display, user_input])
     delete_session_btn.click(delete_session_handler, [session_dropdown], [session_dropdown, session_name_input])
     new_session_btn.click(new_session_handler, [], [chatbot, session_name_input, user_input, token_count_display, cost_display, uploaded_files_dd])
 
