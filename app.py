@@ -31,6 +31,7 @@ PROMPTS = _load_json_file(PROMPTS_PATH, {})
 if not PROMPTS:
     print(f"WARNING: Missing prompts at {PROMPTS_PATH}. Using defaults.")
 
+SEND_SYSTEM_PROMPT = PROMPTS.get("send_system_prompt", "")
 POLYCOMB_PROMPT = PROMPTS.get("polycomb_prompt", "")
 DEMO_SCENARIOS = PROMPTS.get("demo_scenarios", {})
 DEMO_CRITIQUE_PROMPT = PROMPTS.get("demo_critique_prompt", "")
@@ -50,6 +51,33 @@ def _badge_html(label: str, value: str) -> str:
         "<div style='text-align:center;'>"
         f"<div style='font-size:11px;color:#666;margin-bottom:4px;'>{label}</div>"
         f"<div class='badge'>{value}</div>"
+        "</div>"
+    )
+
+def _status_html(use_openrouter: bool) -> str:
+    """Render a compact status badge for API + MongoDB."""
+    mongo_status = "OK"
+    try:
+        get_mongodb_persistence()
+    except Exception:
+        mongo_status = "ERR"
+
+    if use_openrouter:
+        api_status = "OpenRouter" if os.getenv("OPENROUTER_API_KEY") else "OpenRouter (missing key)"
+    else:
+        available = []
+        if os.getenv("OPENAI_API_KEY"):
+            available.append("OpenAI")
+        if os.getenv("ANTHROPIC_API_KEY"):
+            available.append("Anthropic")
+        if os.getenv("GEMINI_API_KEY"):
+            available.append("Gemini")
+        api_status = "Native: " + ("+".join(available) if available else "missing keys")
+
+    return (
+        "<div style='text-align:center;'>"
+        "<div style='font-size:11px;color:#666;margin-bottom:4px;'>Status</div>"
+        f"<div class='badge'>API: {api_status} | Mongo: {mongo_status}</div>"
         "</div>"
     )
 
@@ -331,6 +359,41 @@ def process_uploaded_files(files) -> str:
     
     return "\n".join(file_contents)
 
+def build_files_preview(files, max_total_chars: int = 2000, per_file_chars: int = 600) -> str:
+    """Build a compact preview for uploaded files."""
+    if not files:
+        return "No files uploaded."
+
+    previews = []
+    total = 0
+    for file in files:
+        try:
+            filename = os.path.basename(file.name)
+            _, ext = os.path.splitext(filename.lower())
+            if ext == ".pdf":
+                content = _read_pdf_text(file.name)
+            else:
+                with open(file.name, "r", encoding="utf-8") as f:
+                    content = f.read()
+        except Exception as e:
+            previews.append(f"**{filename}**\n\nError reading file: {e}\n")
+            continue
+
+        snippet = (content or "").strip().replace("\r\n", "\n")
+        if len(snippet) > per_file_chars:
+            snippet = snippet[:per_file_chars].rstrip() + "…"
+        if not snippet:
+            snippet = "[No extractable text]"
+
+        block = f"**{filename}**\n\n{snippet}\n"
+        if total + len(block) > max_total_chars:
+            previews.append("**[Preview truncated]**")
+            break
+        previews.append(block)
+        total += len(block)
+
+    return "\n\n---\n\n".join(previews)
+
 def format_bot_message(content: str, purpose: str, model_name: str) -> str:
     """Formats a bot message with a large, bold Markdown header."""
     purpose_map = {
@@ -345,6 +408,8 @@ def format_bot_message(content: str, purpose: str, model_name: str) -> str:
 def build_messages_with_context(user_prompt: str, history: List[dict], uploaded_files) -> List[dict]:
     """Combine user prompt with history and file context into a message list."""
     messages = []
+    if SEND_SYSTEM_PROMPT:
+        messages.append({"role": "system", "content": SEND_SYSTEM_PROMPT})
     file_context = process_uploaded_files(uploaded_files)
     if file_context:
         messages.append({"role": "user", "content": f"Please use the following files as context for the entire conversation:\n{file_context}\n(This is a system-level instruction and should not be repeated in your response.)"})
@@ -629,14 +694,14 @@ with gr.Blocks(
     }
 
     /* subtle label styling placed above badges (uses native gradio labels if present) */
-    #token-box .gr-label, #cost-box .gr-label {
+    #token-box .gr-label, #cost-box .gr-label, #status-box .gr-label {
         font-size:11px;
         margin-bottom:4px;
         color:#666;
     }
 
     /* ensure small footprint */
-    #token-box, #cost-box { padding:0; margin:0 6px; }
+    #token-box, #cost-box, #status-box { padding:0; margin:0 6px; }
     """ 
 ) as demo:
     
@@ -668,6 +733,11 @@ with gr.Blocks(
                         "<div class='badge' id='cost-badge'>$0.00</div>"
                         "</div>",
                         elem_id="cost-box"
+                    )
+                with gr.Column(scale=2, min_width=140, elem_id="status-box"):
+                    status_display = gr.HTML(
+                        _status_html(use_openrouter=True),
+                        elem_id="status-box"
                     )
             
             gr.Markdown("---")  # Separator between header and controls
@@ -702,6 +772,7 @@ with gr.Blocks(
                 file_types=["text", ".md", ".py", ".csv", ".json", ".pdf"],
                 size="sm"
             )
+            clear_files_btn = gr.Button("Clear Files", variant="secondary", size="sm")
             uploaded_files_dd = gr.Dropdown(
                 choices=[],
                 value=[],
@@ -709,6 +780,8 @@ with gr.Blocks(
                 label="Uploaded Files",
                 interactive=False,
             )
+            with gr.Accordion("File Preview", open=False):
+                file_preview_md = gr.Markdown("No files uploaded.")
             
             gr.Markdown("---")
             
@@ -819,6 +892,7 @@ with gr.Blocks(
     send_model_dropdown.change(sync_send_to_primary, [send_model_dropdown], [primary_model])
     critique_model.change(sync_critique_to_critique, [critique_model], [critique_model_dropdown])
     critique_model_dropdown.change(sync_critique_action_to_critique, [critique_model_dropdown], [critique_model])
+    api_provider_switch.change(lambda v: _status_html(v), [api_provider_switch], [status_display])
 
     def handle_view_context(history: List[dict]):
         """Formats the conversation history for viewing and downloading."""
@@ -860,7 +934,11 @@ with gr.Blocks(
         file_names = [os.path.basename(f.name) for f in files]
         # File metadata could be stored in MongoDB if needed
         default_upload_prompt = "Analyse the uploaded documents and summarise"
-        return files, default_upload_prompt, gr.update(choices=file_names, value=file_names)
+        preview = build_files_preview(files)
+        return files, default_upload_prompt, gr.update(choices=file_names, value=file_names), preview
+
+    def clear_files_handler():
+        return [], gr.update(choices=[], value=[]), "No files uploaded."
 
     def handle_summarize(history: List[dict]) -> Generator:
         """Summarizes the conversation history to reduce token count."""
@@ -932,12 +1010,12 @@ with gr.Blocks(
 
     def new_session_handler():
         # clear session & prefill send box with default prompt
-        return [], gr.update(value=""), gr.update(value=""), "0", "$0.0000", gr.update(choices=[], value=[])
+        return [], gr.update(value=""), gr.update(value=""), "0", "$0.0000", gr.update(choices=[], value=[]), "No files uploaded."
 
     save_session_btn.click(save_session_handler, [session_name_input, chatbot], [session_dropdown, session_name_input])
     load_session_btn.click(load_session_handler, [session_dropdown], [chatbot, token_count_display, cost_display, user_input])
     delete_session_btn.click(delete_session_handler, [session_dropdown], [session_dropdown, session_name_input])
-    new_session_btn.click(new_session_handler, [], [chatbot, session_name_input, user_input, token_count_display, cost_display, uploaded_files_dd])
+    new_session_btn.click(new_session_handler, [], [chatbot, session_name_input, user_input, token_count_display, cost_display, uploaded_files_dd, file_preview_md])
 
     send_btn.click(
         handle_send,
@@ -966,7 +1044,12 @@ with gr.Blocks(
     upload_btn.upload(
         handle_upload,
         [upload_btn],
-        [file_state, user_input, uploaded_files_dd]
+        [file_state, user_input, uploaded_files_dd, file_preview_md]
+    )
+    clear_files_btn.click(
+        clear_files_handler,
+        [],
+        [file_state, uploaded_files_dd, file_preview_md]
     )
 
     summarize_btn.click(
@@ -1015,12 +1098,12 @@ with gr.Blocks(
         except Exception:
             pass
         # Clear persisted data and prefill send box with default prompt
-        return [], [], gr.update(value="", placeholder=POLYCOMB_PROMPT or "Enter your question..."), "0", "$0.0000", gr.update(choices=[], value=[])
+        return [], [], gr.update(value="", placeholder=POLYCOMB_PROMPT or "Enter your question..."), "0", "$0.0000", gr.update(choices=[], value=[]), "No files uploaded."
 
     reset_btn.click(
         reset_app,
         [],
-        [chatbot, file_state, user_input, token_count_display, cost_display, uploaded_files_dd]
+        [chatbot, file_state, user_input, token_count_display, cost_display, uploaded_files_dd, file_preview_md]
     )
 
 if __name__ == "__main__":
