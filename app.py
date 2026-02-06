@@ -7,9 +7,42 @@ from dotenv import load_dotenv
 import json
 import tempfile
 import time
+from pypdf import PdfReader
 from mongodb_persistence import get_mongodb_persistence
 
 load_dotenv() # Load variables from .env file
+
+CONTENT_DIR = os.path.join(os.path.dirname(__file__), "content")
+MODEL_MAP_PATH = os.path.join(CONTENT_DIR, "model_map.json")
+PROMPTS_PATH = os.path.join(CONTENT_DIR, "prompts.json")
+
+def _load_json_file(path: str, default):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print(f"WARNING: Missing JSON config at {path}. Using default.")
+        return default
+    except json.JSONDecodeError as e:
+        print(f"ERROR: Invalid JSON in {path}: {e}. Using default.")
+        return default
+
+PROMPTS = _load_json_file(PROMPTS_PATH, {})
+if not PROMPTS:
+    print(f"WARNING: Missing prompts at {PROMPTS_PATH}. Using defaults.")
+
+POLYCOMB_PROMPT = PROMPTS.get("polycomb_prompt", "")
+DEMO_SCENARIOS = PROMPTS.get("demo_scenarios", {})
+DEMO_CRITIQUE_PROMPT = PROMPTS.get("demo_critique_prompt", "")
+DEMO_SYNTHESIS_PROMPT = PROMPTS.get("demo_synthesis_prompt", "")
+SHORT_CRITIQUE_PROMPT = PROMPTS.get(
+    "short_critique_prompt",
+    "Please provide a concise, constructive critique focusing on: factual accuracy, logical reasoning, evidence quality, and practical feasibility...",
+)
+SHORT_REVIEW_PROMPT = PROMPTS.get(
+    "short_review_prompt",
+    "Based on the critique, provide a revised response that corrects any errors and addresses the identified concerns...",
+)
 
 def _badge_html(label: str, value: str) -> str:
     """Render the full HTML used by the token/cost badges so handlers can return it intact."""
@@ -221,24 +254,19 @@ def load_test_cases(filepath: str) -> dict:
         cases["Default Scenario"] = "A mid-sized country faces a resurgence of a novel respiratory virus. Vaccination rates have plateaued between 45-65%, ICU capacity varies between 75-95% across regions, and economic recovery remains fragile. Recent epidemiological studies suggest transmission rates may be 30-60% higher than initial models predicted. The government is considering reintroducing strict lockdowns for 4-8 weeks to suppress transmission before winter. Should it do so? Justify your position with evidence-backed analysis of epidemiological risk, economic stability, civil liberties, and public trust. Provide specific citations for key empirical claims and measurable predictions your approach would generate."
     return cases
 
-# Demo scenarios designed to showcase ensemble LLM capabilities  
-DEMO_SCENARIOS = {
-    "Historical Counterfactual": """It's 1947. You're advising the newly formed UN on the Palestine partition plan. You have access to: British Mandate reports, population data, religious significance maps, economic surveys, and testimonies from all parties. Knowing what we know about nation-building, conflict resolution, and regional stability - but constrained by 1947 knowledge and possibilities - what alternative approach might have prevented decades of conflict? Consider: demographic realities, religious significance, economic interdependence, and governance models available in 1947.""",
-    
-    "Scientific Controversy": """Recent studies on intermittent fasting show contradictory results. Study A (n=50,000, 5-year follow-up) shows 23% reduction in cardiovascular events and improved insulin sensitivity. Study B (n=30,000, 2-year follow-up) shows 15% increased eating disorder rates and social dysfunction. Study C (n=15,000, metabolic ward) questions long-term metabolic benefits. Meta-analysis D identifies publication bias favoring positive results. Should major health authorities recommend intermittent fasting for general population health? Consider: study quality, population differences, implementation challenges, and alternative approaches.""",
-    
-    "Urban Development Dilemma": """A mid-sized city faces a critical decision: approve a $2.8B urban redevelopment project that would create 18,000 jobs and modernize aging infrastructure, but requires demolishing the Riverside Historic District - home to 3,200 low-income residents, 40+ small businesses, and buildings dating to the 1880s. Environmental groups cite groundwater contamination risks. Economists argue the project is essential for regional competitiveness. The housing authority reports a 15-year wait list for affordable units. You have 8 months to decide before federal funding expires. What should the city do?"""
-}
-
 # Load test cases at startup from the new file
 TEST_CASES = load_test_cases("content/4domains_3complexity_16testcases_4Oct25.json")
 
 # Add demo scenarios to showcase ensemble capabilities - put them first for visibility
-demo_cases = {
-    "🎯 DEMO: Historical Counterfactual": DEMO_SCENARIOS["Historical Counterfactual"],
-    "🎯 DEMO: Scientific Controversy": DEMO_SCENARIOS["Scientific Controversy"], 
-    "🎯 DEMO: Urban Development": DEMO_SCENARIOS["Urban Development Dilemma"]
-}
+demo_cases = {}
+for label, key in [
+    ("🎯 DEMO: Historical Counterfactual", "Historical Counterfactual"),
+    ("🎯 DEMO: Scientific Controversy", "Scientific Controversy"),
+    ("🎯 DEMO: Urban Development", "Urban Development Dilemma"),
+]:
+    prompt = DEMO_SCENARIOS.get(key)
+    if prompt:
+        demo_cases[label] = prompt
 
 # Create new ordered dict with demos first
 ordered_cases = {}
@@ -251,7 +279,7 @@ print(f"DEBUG: Demo scenarios: {[k for k in TEST_CASES.keys() if '🎯' in k]}")
 print(f"DEBUG: First 5 keys: {list(TEST_CASES.keys())[:5]}")
 
 
-MODEL_MAP = {
+DEFAULT_MODEL_MAP = {
     # Hypothetical
     "GPT-5":           {"id": "openai/gpt-5",           "provider": "openai", "native_id": "gpt-5", "input_cost_pm": 10.0, "output_cost_pm": 30.0},
     "GPT-5.2":         {"id": "openai/gpt-5.2",         "provider": "openai", "native_id": "gpt-5.2", "input_cost_pm": 1.75, "output_cost_pm": 14.0},
@@ -268,8 +296,20 @@ MODEL_MAP = {
     "Gemini 3 Flash Preview":{"id": "google/gemini-3-flash-preview", "provider": "google", "native_id": "gemini-3-flash-preview", "input_cost_pm": 0.5, "output_cost_pm": 3.0},
 }
 
+MODEL_MAP = _load_json_file(MODEL_MAP_PATH, DEFAULT_MODEL_MAP)
+
+def _read_pdf_text(path: str) -> str:
+    """Extract text from a PDF file."""
+    reader = PdfReader(path)
+    parts = []
+    for page in reader.pages:
+        page_text = page.extract_text() or ""
+        if page_text:
+            parts.append(page_text)
+    return "\n".join(parts)
+
 def process_uploaded_files(files) -> str:
-    """Process uploaded text files and return their content as a formatted string"""
+    """Process uploaded files (text + PDFs) and return their content as a formatted string"""
     if not files:
         return ""
     
@@ -277,9 +317,13 @@ def process_uploaded_files(files) -> str:
     
     for file in files:
         try:
-            with open(file.name, 'r', encoding='utf-8') as f:
-                content = f.read()
             filename = os.path.basename(file.name)
+            _, ext = os.path.splitext(filename.lower())
+            if ext == ".pdf":
+                content = _read_pdf_text(file.name)
+            else:
+                with open(file.name, 'r', encoding='utf-8') as f:
+                    content = f.read()
             file_contents.append(f"=== FILE: {filename} ===\n{content}\n=== END FILE ===\n")
         except Exception as e:
             filename = os.path.basename(file.name) if hasattr(file, 'name') else "unknown"
@@ -326,55 +370,119 @@ def stream_model(messages: List[dict], model_name: str, use_openrouter: bool) ->
 
     model_info = MODEL_MAP[model_name]
 
-    if use_openrouter:
-        client = get_openrouter_client()
-        stream = client.chat.completions.create(
-            model=model_info["id"], 
-            messages=messages, 
-            stream=True, 
-            max_tokens=8192
-        )
-        for chunk in stream:
-            if chunk.choices[0].delta.content:
-                yield chunk.choices[0].delta.content
-    else:
-        provider = model_info["provider"]
-        native_id = model_info["native_id"]
+    try:
+        if use_openrouter:
+            if not os.getenv("OPENROUTER_API_KEY"):
+                yield "Missing OPENROUTER_API_KEY. Add it to `.env` or disable OpenRouter."
+                return
+            try:
+                client = get_openrouter_client()
+                stream = client.chat.completions.create(
+                    model=model_info["id"], 
+                    messages=messages, 
+                    stream=True, 
+                    max_tokens=8192
+                )
+                for chunk in stream:
+                    if chunk.choices[0].delta.content:
+                        yield chunk.choices[0].delta.content
+                return
+            except Exception as e:
+                # If OpenRouter rejects the model, fall back to native provider
+                msg = str(e)
+                if "not a valid model" not in msg and "invalid model" not in msg:
+                    raise
+                provider = model_info["provider"]
+                native_id = model_info["native_id"]
+                if provider == "openai":
+                    if not os.getenv("OPENAI_API_KEY"):
+                        yield "Missing OPENAI_API_KEY. Add it to `.env` or disable OpenRouter."
+                        return
+                    client = get_openai_client()
+                    stream = client.chat.completions.create(model=native_id, messages=messages, stream=True, max_tokens=8192)
+                    for chunk in stream:
+                        if chunk.choices[0].delta.content:
+                            yield chunk.choices[0].delta.content
+                    return
+                if provider == "anthropic":
+                    if not os.getenv("ANTHROPIC_API_KEY"):
+                        yield "Missing ANTHROPIC_API_KEY. Add it to `.env` or disable OpenRouter."
+                        return
+                    client = get_anthropic_client()
+                    system_prompt = ""
+                    if messages and messages[0]['role'] == 'system':
+                        system_prompt = messages[0]['content']
+                        messages = messages[1:]
+                    with client.messages.stream(model=native_id, system=system_prompt, messages=messages, max_tokens=8192) as stream:
+                        for text in stream.text_stream:
+                            yield text
+                    return
+                if provider == "google":
+                    if not os.getenv("GEMINI_API_KEY"):
+                        yield "Missing GEMINI_API_KEY. Add it to `.env` or disable OpenRouter."
+                        return
+                    client = get_gemini_client()
+                    model = client.GenerativeModel(native_id)
+                    cleaned_messages = []
+                    for msg in messages:
+                        if cleaned_messages and cleaned_messages[-1]['role'] == msg['role']:
+                            cleaned_messages[-1]['content'] += f"\n\n{msg['content']}"
+                        else:
+                            cleaned_messages.append(msg)
+                    response = model.generate_content(cleaned_messages, stream=True)
+                    for chunk in response:
+                        yield chunk.text
+                    return
+                raise
+        else:
+            provider = model_info["provider"]
+            native_id = model_info["native_id"]
 
-        if provider == "openai":
-            client = get_openai_client()
-            stream = client.chat.completions.create(model=native_id, messages=messages, stream=True, max_tokens=8192)
-            for chunk in stream:
-                if chunk.choices[0].delta.content:
-                    yield chunk.choices[0].delta.content
-        
-        elif provider == "anthropic":
-            client = get_anthropic_client()
-            # Anthropic requires system prompt to be handled differently
-            system_prompt = ""
-            if messages and messages[0]['role'] == 'system':
-                system_prompt = messages[0]['content']
-                messages = messages[1:]
-
-            with client.messages.stream(model=native_id, system=system_prompt, messages=messages, max_tokens=8192) as stream:
-                for text in stream.text_stream:
-                    yield text
-
-        elif provider == "google":
-            client = get_gemini_client()
-            model = client.GenerativeModel(native_id)
-            # Gemini has specific content validation rules
-            cleaned_messages = []
-            for msg in messages:
-                # Ensure user/model roles alternate correctly
-                if cleaned_messages and cleaned_messages[-1]['role'] == msg['role']:
-                    cleaned_messages[-1]['content'] += f"\n\n{msg['content']}"
-                else:
-                    cleaned_messages.append(msg)
+            if provider == "openai":
+                if not os.getenv("OPENAI_API_KEY"):
+                    yield "Missing OPENAI_API_KEY. Add it to `.env` or enable OpenRouter."
+                    return
+                client = get_openai_client()
+                stream = client.chat.completions.create(model=native_id, messages=messages, stream=True, max_tokens=8192)
+                for chunk in stream:
+                    if chunk.choices[0].delta.content:
+                        yield chunk.choices[0].delta.content
             
-            response = model.generate_content(cleaned_messages, stream=True)
-            for chunk in response:
-                yield chunk.text
+            elif provider == "anthropic":
+                if not os.getenv("ANTHROPIC_API_KEY"):
+                    yield "Missing ANTHROPIC_API_KEY. Add it to `.env` or enable OpenRouter."
+                    return
+                client = get_anthropic_client()
+                # Anthropic requires system prompt to be handled differently
+                system_prompt = ""
+                if messages and messages[0]['role'] == 'system':
+                    system_prompt = messages[0]['content']
+                    messages = messages[1:]
+
+                with client.messages.stream(model=native_id, system=system_prompt, messages=messages, max_tokens=8192) as stream:
+                    for text in stream.text_stream:
+                        yield text
+
+            elif provider == "google":
+                if not os.getenv("GEMINI_API_KEY"):
+                    yield "Missing GEMINI_API_KEY. Add it to `.env` or enable OpenRouter."
+                    return
+                client = get_gemini_client()
+                model = client.GenerativeModel(native_id)
+                # Gemini has specific content validation rules
+                cleaned_messages = []
+                for msg in messages:
+                    # Ensure user/model roles alternate correctly
+                    if cleaned_messages and cleaned_messages[-1]['role'] == msg['role']:
+                        cleaned_messages[-1]['content'] += f"\n\n{msg['content']}"
+                    else:
+                        cleaned_messages.append(msg)
+                
+                response = model.generate_content(cleaned_messages, stream=True)
+                for chunk in response:
+                    yield chunk.text
+    except Exception as e:
+        yield f"Request failed: {type(e).__name__}: {e}"
 
 
 def chat_turn(user_question: str, history: List[dict], primary_model: str, uploaded_files, use_openrouter: bool) -> Generator:
@@ -495,96 +603,6 @@ def handle_review(history: List[dict], primary_model: str, uploaded_files, revie
     yield history, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
 
 
-# Human-readable default prompt (edit as you prefer) - Using demo scenario for impact
-POLYCOMB_PROMPT = """A mid-sized city faces a critical decision: approve a $2.8B urban redevelopment project that would create 18,000 jobs and modernize aging infrastructure, but requires demolishing the Riverside Historic District - home to 3,200 low-income residents, 40+ small businesses, and buildings dating to the 1880s. Environmental groups cite groundwater contamination risks. Economists argue the project is essential for regional competitiveness. The housing authority reports a 15-year wait list for affordable units. You have 8 months to decide before federal funding expires. What should the city do?"""
-
-# Demo scenarios designed to showcase ensemble LLM capabilities  
-DEMO_SCENARIOS = {
-    "Historical Counterfactual": """It's 1947. You're advising the newly formed UN on the Palestine partition plan. You have access to: British Mandate reports, population data, religious significance maps, economic surveys, and testimonies from all parties. Knowing what we know about nation-building, conflict resolution, and regional stability - but constrained by 1947 knowledge and possibilities - what alternative approach might have prevented decades of conflict? Consider: demographic realities, religious significance, economic interdependence, and governance models available in 1947.""",
-    
-    "Scientific Controversy": """Recent studies on intermittent fasting show contradictory results. Study A (n=50,000, 5-year follow-up) shows 23% reduction in cardiovascular events and improved insulin sensitivity. Study B (n=30,000, 2-year follow-up) shows 15% increased eating disorder rates and social dysfunction. Study C (n=15,000, metabolic ward) questions long-term metabolic benefits. Meta-analysis D identifies publication bias favoring positive results. Should major health authorities recommend intermittent fasting for general population health? Consider: study quality, population differences, implementation challenges, and alternative approaches.""",
-    
-    "Urban Development Dilemma": """A mid-sized city faces a critical decision: approve a $2.8B urban redevelopment project that would create 18,000 jobs and modernize aging infrastructure, but requires demolishing the Riverside Historic District - home to 3,200 low-income residents, 40+ small businesses, and buildings dating to the 1880s. Environmental groups cite groundwater contamination risks. Economists argue the project is essential for regional competitiveness. The housing authority reports a 15-year wait list for affordable units. You have 8 months to decide before federal funding expires. What should the city do?"""
-}
-
-# Enhanced deliberative reasoning prompts for sophisticated ensemble LLM capabilities
-DEMO_CRITIQUE_PROMPT = """You are an expert adversarial reasoner tasked with rigorously examining the preceding response. Your goal is not just evaluation, but intellectual transformation through deep scrutiny.
-
-**PART I: SURFACE-LEVEL ANALYSIS**
-Rate each dimension (1-10) with specific justification:
-• **Factual Accuracy**: Are claims supported by evidence? Are facts, statistics, dates, and causal relationships correct? Are there demonstrable errors or misrepresentations?
-• **Logical Coherence**: Internal consistency, valid inferences, premise-conclusion alignment
-• **Evidence Quality**: Information reliability, source credibility, data interpretation, acknowledgment of limitations and conflicting evidence
-• **Stakeholder Mapping**: Completeness of affected parties, power dynamics, voice representation
-• **Implementation Realism**: Resource constraints, timeline feasibility, political/social barriers
-• **Unintended Consequences**: Second/third-order effects, feedback loops, systemic interactions
-
-**PART II: DEEP COGNITIVE EXAMINATION**
-• **Cognitive Biases**: What systematic thinking errors are present? (confirmation bias, availability heuristic, anchoring, etc.)
-• **Epistemic Blind Spots**: What crucial unknowns are being treated as knowns? Where is false certainty masquerading as analysis?
-• **Frame Examination**: What assumptions about the problem definition itself may be flawed? Are we solving the right problem?
-• **Alternative Paradigms**: What fundamentally different ways of understanding this situation are being ignored?
-
-**PART III: ADVERSARIAL CHALLENGE**
-• **Steel-manning Opposition**: What is the strongest possible case against this recommendation?
-• **Assumption Inversion**: What if the core assumptions were reversed - how would that change everything?
-• **Temporal Perspectives**: How might this look catastrophically wrong in 5/20/50 years?
-• **Stakeholder Role-Play**: Argue from the perspective of the three most disadvantaged groups
-
-**PART IV: META-REASONING**
-• **Process Critique**: What flaws exist in HOW this reasoning was conducted, not just the conclusions?
-• **Information Architecture**: What critical information is missing that would fundamentally alter the analysis?
-• **Uncertainty Quantification**: Where should we be much more uncertain than the response suggests?
-
-Conclude with: (1) The single most dangerous flaw in this reasoning, (2) The most important question that remains unasked, (3) A completely different framing that might yield superior insights."""
-
-DEMO_SYNTHESIS_PROMPT = """You are a master synthesizer tasked with transcending the original analysis through deep integration of critique insights. This is not mere revision—it's intellectual evolution.
-
-**SYNTHESIS PRINCIPLES:**
-• **Integration over Addition**: Don't just append critique points; weave them into a fundamentally transformed understanding
-• **Tension Resolution**: Where the critique reveals legitimate competing values/perspectives, develop sophisticated approaches that honor multiple valid concerns
-• **Emergent Insights**: Look for new understanding that emerges from the interaction between original reasoning and critique
-• **Uncertainty Embrace**: Be comfortable with irreducible uncertainties; make them productive rather than paralyzing
-
-**REQUIRED SYNTHESIS ELEMENTS:**
-
-1. **Factual Correction & Verification**: Address any factual errors, misrepresentations, or unsupported claims identified in the critique. Provide corrected information with appropriate caveats.
-
-2. **Reframed Problem Statement**: How does the critique suggest we should understand the core challenge differently?
-
-3. **Enhanced Evidence Architecture**: Build a more robust foundation by incorporating critique insights, addressing information gaps, and acknowledging conflicting evidence
-
-4. **Multi-Stakeholder Harmony**: Develop approaches that address the critique's stakeholder concerns without abandoning feasibility
-
-5. **Adaptive Implementation Strategy**: Create implementation approaches that anticipate and adapt to the consequences identified in the critique
-
-6. **Epistemic Humility Framework**: Explicitly acknowledge key uncertainties, areas of ignorance, and build learning/adjustment mechanisms into recommendations
-
-7. **Alternative Scenario Planning**: Address the critique's concerns about different future contexts or assumption failures
-
-**OUTPUT STRUCTURE:**
-- **Executive Synthesis**: 2-3 sentences capturing how your thinking has fundamentally evolved
-- **Factual Clarifications**: Any corrections to errors or misrepresentations in the original response
-- **Transformed Analysis**: Your new understanding of the situation incorporating critique insights
-- **Refined Recommendations**: Specific actions that address both original goals and critique concerns
-- **Uncertainty Map**: Key unknowns and how you'll gather information/adapt as you learn
-- **Success/Failure Indicators**: How you'll know if your approach is working or needs revision
-
-Remember: The goal is not to defend the original analysis or simply fix its flaws, but to achieve a higher level of understanding that incorporates the wisdom from both perspectives. Accuracy is paramount - admit when you don't know something rather than making unsupported claims."""
-
-# Shortened versions for UI display
-SHORT_CRITIQUE_PROMPT = "Please provide a concise, constructive critique focusing on: factual accuracy, logical reasoning, evidence quality, and practical feasibility..."
-SHORT_REVIEW_PROMPT = "Based on the critique, provide a revised response that corrects any errors and addresses the identified concerns..."
-
-# Demo scenarios designed to showcase ensemble LLM capabilities
-DEMO_SCENARIOS = {
-    "Historical Counterfactual": """It's 1947. You're advising the newly formed UN on the Palestine partition plan. You have access to: British Mandate reports, population data, religious significance maps, economic surveys, and testimonies from all parties. Knowing what we know about nation-building, conflict resolution, and regional stability - but constrained by 1947 knowledge and possibilities - what alternative approach might have prevented decades of conflict? Consider: demographic realities, religious significance, economic interdependence, and governance models available in 1947.""",
-    
-    "Scientific Controversy": """Recent studies on intermittent fasting show contradictory results. Study A (n=50,000, 5-year follow-up) shows 23% reduction in cardiovascular events and improved insulin sensitivity. Study B (n=30,000, 2-year follow-up) shows 15% increased eating disorder rates and social dysfunction. Study C (n=15,000, metabolic ward) questions long-term metabolic benefits. Meta-analysis D identifies publication bias favoring positive results. Should major health authorities recommend intermittent fasting for general population health? Consider: study quality, population differences, implementation challenges, and alternative approaches.""",
-    
-    "Urban Development Dilemma": """A mid-sized city faces a critical decision: approve a $2.8B urban redevelopment project that would create 18,000 jobs and modernize aging infrastructure, but requires demolishing the Riverside Historic District - home to 3,200 low-income residents, 40+ small businesses, and buildings dating to the 1880s. Environmental groups cite groundwater contamination risks. Economists argue the project is essential for regional competitiveness. The housing authority reports a 15-year wait list for affordable units. You have 8 months to decide before federal funding expires. What should the city do?"""
-}
-
 with gr.Blocks(
     title="Discursus",
     theme=gr.themes.Default(),
@@ -663,16 +681,16 @@ with gr.Blocks(
             # Input Section
             gr.Markdown("### Send Message")
             user_input = gr.Textbox(
-                label="Your Question", 
-                value=POLYCOMB_PROMPT, 
-                placeholder="Enter your question...", 
+                label="Your Question",
+                value="",
+                placeholder=POLYCOMB_PROMPT or "Enter your question...",
                 lines=3
             )
             
             with gr.Row():
                 send_model_dropdown = gr.Dropdown(
                     choices=list(MODEL_MAP.keys()), 
-                    value="GPT-5 Mini", 
+                    value="Gemini 3 Flash", 
                     label="Model",
                     scale=2
                 )
@@ -681,8 +699,15 @@ with gr.Blocks(
             upload_btn = gr.UploadButton(
                 "📎 Upload Files", 
                 file_count="multiple", 
-                file_types=["text", ".md", ".py", ".csv", ".json"],
+                file_types=["text", ".md", ".py", ".csv", ".json", ".pdf"],
                 size="sm"
+            )
+            uploaded_files_dd = gr.Dropdown(
+                choices=[],
+                value=[],
+                multiselect=True,
+                label="Uploaded Files",
+                interactive=False,
             )
             
             gr.Markdown("---")
@@ -713,7 +738,7 @@ with gr.Blocks(
             with gr.Row():
                 review_model_dropdown = gr.Dropdown(
                     choices=list(MODEL_MAP.keys()), 
-                    value="Gemini 3 Flash Preview", 
+                    value="GPT-5.2 Mini", 
                     label="Model",
                     scale=2
                 )
@@ -738,7 +763,7 @@ with gr.Blocks(
             # Settings Accordion (collapsed but always accessible)
             with gr.Accordion("Settings", open=False):
                 # Global Model Settings (for sync)
-                primary_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="GPT-5 Mini", label="Default Primary Model")
+                primary_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="GPT-5.2 Mini", label="Default Primary Model")
                 critique_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Claude 4.5 Sonnet", label="Default Critique Model")
                 api_provider_switch = gr.Checkbox(label="Use OpenRouter", value=True)
                 
@@ -822,17 +847,20 @@ with gr.Blocks(
         return markdown_display, temp_filepath, gr.update(visible=True)
 
     def handle_send(user_question, history, p_model, files, use_openrouter):
-        if not user_question.strip():
+        question = user_question.strip()
+        if not question:
+            question = (POLYCOMB_PROMPT or "").strip()
+        if not question:
             tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
             return history, gr.update(value=""), _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
-        yield from chat_turn(user_question, history, p_model, files, use_openrouter)
+        yield from chat_turn(question, history, p_model, files, use_openrouter)
 
     def handle_upload(files):
         """Handles the file upload event and updates the UI."""
         file_names = [os.path.basename(f.name) for f in files]
-        upload_status = f"📎 Uploaded: {', '.join(file_names)}. You can now ask questions about them."
         # File metadata could be stored in MongoDB if needed
-        return files, upload_status
+        default_upload_prompt = "Analyse the uploaded documents and summarise"
+        return files, default_upload_prompt, gr.update(choices=file_names, value=file_names)
 
     def handle_summarize(history: List[dict]) -> Generator:
         """Summarizes the conversation history to reduce token count."""
@@ -904,12 +932,12 @@ with gr.Blocks(
 
     def new_session_handler():
         # clear session & prefill send box with default prompt
-        return [], gr.update(value=""), gr.update(value=POLYCOMB_PROMPT), "0", "$0.0000"
+        return [], gr.update(value=""), gr.update(value=""), "0", "$0.0000", gr.update(choices=[], value=[])
 
     save_session_btn.click(save_session_handler, [session_name_input, chatbot], [session_dropdown, session_name_input])
     load_session_btn.click(load_session_handler, [session_dropdown], [chatbot, token_count_display, cost_display])
     delete_session_btn.click(delete_session_handler, [session_dropdown], [session_dropdown, session_name_input])
-    new_session_btn.click(new_session_handler, [], [chatbot, session_name_input, user_input, token_count_display, cost_display])
+    new_session_btn.click(new_session_handler, [], [chatbot, session_name_input, user_input, token_count_display, cost_display, uploaded_files_dd])
 
     send_btn.click(
         handle_send,
@@ -938,7 +966,7 @@ with gr.Blocks(
     upload_btn.upload(
         handle_upload,
         [upload_btn],
-        [file_state, user_input]
+        [file_state, user_input, uploaded_files_dd]
     )
 
     summarize_btn.click(
@@ -959,27 +987,12 @@ with gr.Blocks(
         [context_viewer_col]
     )
 
-    reset_btn.click(
-        lambda: ([], [], gr.update(placeholder="Enter your message or use the suggested question...", value=""), "0", "$0.0000"),
-        [],
-        [chatbot, file_state, user_input, token_count_display, cost_display]
-    )
-
     def on_load():
-        """Initialize UI with persisted conversation and available sessions."""
+        """Initialize UI with empty conversation and available sessions."""
         sessions = list_sessions()
-        
-        # Load the current conversation from MongoDB (like the original file-based version)
-        history = load_conversation()
-        
-        # Calculate costs for the loaded conversation
-        if history:
-            tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
-            token_display = _badge_html("Token Count", str(tokens))
-            cost_display = _badge_html("Estimated Cost", f"${cost:.4f}")
-        else:
-            token_display = _badge_html("Token Count", "0")
-            cost_display = _badge_html("Estimated Cost", "$0.0000")
+        history = []
+        token_display = _badge_html("Token Count", "0")
+        cost_display = _badge_html("Estimated Cost", "$0.0000")
         
         # Set the session dropdown to the last used session
         try:
@@ -1002,12 +1015,12 @@ with gr.Blocks(
         except Exception:
             pass
         # Clear persisted data and prefill send box with default prompt
-        return [], [], gr.update(placeholder="Enter your message or use the suggested question...", value=POLYCOMB_PROMPT), "0", "$0.0000"
+        return [], [], gr.update(value="", placeholder=POLYCOMB_PROMPT or "Enter your question..."), "0", "$0.0000", gr.update(choices=[], value=[])
 
     reset_btn.click(
         reset_app,
         [],
-        [chatbot, file_state, user_input, token_count_display, cost_display]
+        [chatbot, file_state, user_input, token_count_display, cost_display, uploaded_files_dd]
     )
 
 if __name__ == "__main__":

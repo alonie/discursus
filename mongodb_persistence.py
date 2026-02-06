@@ -35,9 +35,9 @@ class MongoDBPersistence:
                 maxPoolSize=10,  # Connection pool size
                 minPoolSize=1,   # Minimum connections
                 maxIdleTimeMS=30000,  # Close connections after 30s idle
-                serverSelectionTimeoutMS=5000,  # 5s timeout for server selection
-                socketTimeoutMS=10000,  # 10s socket timeout
-                connectTimeoutMS=5000,  # 5s connection timeout
+                serverSelectionTimeoutMS=20000,  # 20s timeout for server selection
+                socketTimeoutMS=20000,  # 20s socket timeout
+                connectTimeoutMS=20000,  # 20s connection timeout
                 retryWrites=True,
                 w='majority'  # Write concern for data safety
             )
