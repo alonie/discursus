@@ -827,7 +827,7 @@ with gr.Blocks(
             with gr.Row():
                 review_model_dropdown = gr.Dropdown(
                     choices=list(MODEL_MAP.keys()), 
-                    value="GPT-5.2 Mini", 
+                    value="GPT-5 Mini", 
                     label="Model",
                     scale=2
                 )
@@ -852,7 +852,7 @@ with gr.Blocks(
             # Settings Accordion (collapsed but always accessible)
             with gr.Accordion("Settings", open=False):
                 # Global Model Settings (for sync)
-                primary_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="GPT-5.2 Mini", label="Default Primary Model")
+                primary_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="GPT-5 Mini", label="Default Primary Model")
                 critique_model = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Claude 4.5 Sonnet", label="Default Critique Model")
                 api_provider_switch = gr.Checkbox(label="Use OpenRouter", value=True)
                 
