@@ -398,7 +398,7 @@ def chat_turn(user_question: str, history: List[dict], primary_model: str, uploa
     response_stream = stream_model(messages, primary_model, use_openrouter)
     
     full_response = ""
-    tokens, cost = 0, 0.0  # Initialize to avoid recalculating every chunk
+    tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
     
     for chunk in response_stream:
         full_response += chunk
@@ -432,7 +432,7 @@ def handle_critique(history: List[dict], critique_model: str, uploaded_files, cr
 
     # streaming loop with NO database saves during streaming
     critique_response = ""
-    tokens, cost = 0, 0.0  # Initialize to avoid recalculating every chunk
+    tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
     
     for chunk in stream_model(critique_messages, critique_model, use_openrouter):
         critique_response += chunk
@@ -480,7 +480,7 @@ def handle_review(history: List[dict], primary_model: str, uploaded_files, revie
     yield history, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
 
     revised_response = ""
-    tokens, cost = 0, 0.0  # Initialize to avoid recalculating every chunk
+    tokens, cost = calculate_cost_and_tokens(history, MODEL_MAP)
     
     for chunk in stream_model(review_messages, primary_model, use_openrouter):
         revised_response += chunk
