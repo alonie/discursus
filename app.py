@@ -87,6 +87,8 @@ def _status_html(use_openrouter: bool) -> str:
 
 def set_autosave_flag(value: bool):
     """Set autosave flag in MongoDB."""
+    if not os.getenv("MONGODB_URI"):
+        return
     try:
         db = get_mongodb_persistence()
         db.set_autosave_flag(value)
@@ -95,6 +97,8 @@ def set_autosave_flag(value: bool):
 
 def read_autosave_flag() -> bool:
     """Read autosave flag from MongoDB."""
+    if not os.getenv("MONGODB_URI"):
+        return False
     try:
         db = get_mongodb_persistence()
         return db._get_autosave_flag()
@@ -104,6 +108,8 @@ def read_autosave_flag() -> bool:
 
 def save_conversation(history: List[dict]):
     """Save conversation history to MongoDB."""
+    if not os.getenv("MONGODB_URI"):
+        return
     try:
         db = get_mongodb_persistence()
         db.save_conversation(history)
@@ -112,6 +118,8 @@ def save_conversation(history: List[dict]):
 
 def load_conversation() -> List[dict]:
     """Load conversation history from MongoDB."""
+    if not os.getenv("MONGODB_URI"):
+        return []
     try:
         db = get_mongodb_persistence()
         return db.load_conversation()
@@ -123,6 +131,8 @@ def load_conversation() -> List[dict]:
 
 def list_sessions() -> List[str]:
     """List all saved session names from MongoDB."""
+    if not os.getenv("MONGODB_URI"):
+        return []
     try:
         db = get_mongodb_persistence()
         return db.list_sessions()
@@ -132,6 +142,8 @@ def list_sessions() -> List[str]:
 
 def save_session(name: str, history: List[dict]):
     """Save a named session to MongoDB."""
+    if not os.getenv("MONGODB_URI"):
+        return
     try:
         db = get_mongodb_persistence()
         db.save_session(name, history)
@@ -140,6 +152,8 @@ def save_session(name: str, history: List[dict]):
 
 def load_session(name: str) -> List[dict]:
     """Load a named session from MongoDB."""
+    if not os.getenv("MONGODB_URI"):
+        return []
     try:
         db = get_mongodb_persistence()
         return db.load_session(name)
@@ -149,6 +163,8 @@ def load_session(name: str) -> List[dict]:
 
 def delete_session(name: str):
     """Delete a named session from MongoDB."""
+    if not os.getenv("MONGODB_URI"):
+        return
     try:
         db = get_mongodb_persistence()
         db.delete_session(name)
@@ -842,7 +858,12 @@ with gr.Blocks(
                 
                 # Session Management
                 gr.Markdown("**Sessions**")
-                session_dropdown = gr.Dropdown(choices=list_sessions(), label="Saved Sessions", value=list_sessions()[0] if list_sessions() else "")
+                _session_choices = list_sessions()
+                session_dropdown = gr.Dropdown(
+                    choices=_session_choices,
+                    label="Saved Sessions",
+                    value=_session_choices[0] if _session_choices else None
+                )
                 session_name_input = gr.Textbox(label="Session Name", placeholder="Enter name to save...")
                 
                 with gr.Row():
@@ -1081,9 +1102,9 @@ with gr.Blocks(
         try:
             db = get_mongodb_persistence()
             last_session = db._get_last_session()
-            selected_session = last_session if last_session in sessions else (sessions[0] if sessions else "")
+            selected_session = last_session if last_session in sessions else (sessions[0] if sessions else None)
         except:
-            selected_session = sessions[0] if sessions else ""
+            selected_session = sessions[0] if sessions else None
         
         return history, token_display, cost_display, gr.update(choices=sessions, value=selected_session), gr.update(value=""), read_autosave_flag()
 
