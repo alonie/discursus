@@ -1,0 +1,230 @@
+{
+  "benchmark": "MMLU humanities/social reasoning equivalent",
+  "notes": "Filtered to items with clean 10-option parsing and exact-match answer keys.",
+  "test_cases": [
+    {
+      "id": "mmlu_history_56",
+      "domain": "history",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU History Q56",
+      "prompt": "Question: This question refers to the following information.\nThe following excerpt is from a pamphlet.\nYou will do me the justice to remember, that I have always strenuously supported the Right of every man to his own opinion, however different that opinion might be to mine. He who denies to another this right, makes a slave of himself to his present opinion, because he precludes himself the right of changing it.\nThe most formidable weapon against errors of every kind is Reason. I have never used any other, and I trust I never shall.\nThe circumstance that has now taken place in France of the total abolition of the whole national order of priesthood, and of everything appertaining to compulsive systems of religion, and compulsive articles of faith, has not only precipitated my intention, but rendered a work of this kind exceedingly necessary, lest in the general wreck of superstition, of false systems of government, and false theology, we lose sight of morality, of humanity, and of the theology that is true.\nI believe in one God, and no more; and I hope for happiness beyond this life.\nI believe in the equality of man; and I believe that religious duties consist in doing justice, loving mercy, and endeavoring to make our fellow-creatures happy.\nI do not believe in the creed professed by the Jewish church, by the Roman church, by the Greek church, by the Turkish church, by the Protestant church, nor by any church that I know of. My own mind is my own church.\nAll national institutions of churches, whether Jewish, Christian or Turkish, appear to me no other than human inventions, set up to terrify and enslave mankind, and monopolize power and profit.\nI do not mean by this declaration to condemn those who believe otherwise; they have the same right to their belief as I have to mine.\n—Thomas Paine, The Age of Reason, 1794–1795\nWhich of the following Enlightenment philosophes designed a system of checks and balances for government to avoid abuses of power?\n\nOptions:\nA) Thomas Hobbes\nB) Jean Jacques Rousseau\nC) Baron Montesquieu\nD) Voltaire\nE) Denis Diderot\nF) Immanuel Kant\nG) David Hume\nH) Mary Wollstonecraft\nI) Adam Smith\nJ) John Locke",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 56,
+        "correct_answer": "C",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_history_57",
+      "domain": "history",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU History Q57",
+      "prompt": "Question: This question refers to the following information.\n\"The struggle against neo-colonialism is not aimed at excluding the capital of the developed world from operating in less developed countries. It is aimed at preventing the financial power of the developed countries being used in such a way as to impoverish the less developed.\nNon-alignment, as practiced by Ghana and many other countries, is based on co-operation with all States whether they be capitalist, socialist or have a mixed economy. Such a policy, therefore, involves foreign investment from capitalist countries, but it must be invested in accordance with a national plan drawn up by the government of the non-aligned State with its own interests in mind. The issue is not what return the foreign investor receives on his investments…The question is one of power. A State in the grip of neo-colonialism is not master of its own destiny.\"\nKwame Nkrumah, Neo-Colonialism, 1965\nWhich of the following provides the best context for Nkrumah's writings?\n\nOptions:\nA) The spread of communism\nB) The Industrial Revolution\nC) The French Revolution\nD) The Cold War\nE) Decolonization\nF) World War II\nG) Autarky\nH) The rise of multinational corporations\nI) The American Civil Rights Movement\nJ) Regional Free Trade Associations",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 57,
+        "correct_answer": "E",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_history_58",
+      "domain": "history",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU History Q58",
+      "prompt": "Question: What is the approximate mean cranial capacity of Homo erectus?\n\nOptions:\nA) 1200 cc\nB) under 650 cc\nC) 1700 cc\nD) 1350 cc\nE) just under 1000 cc\nF) 1500 cc\nG) under 500 cc\nH) about 800 cc\nI) just over 1100 cc\nJ) about 900 cc",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 58,
+        "correct_answer": "E",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_philosophy_46",
+      "domain": "philosophy",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Philosophy Q46",
+      "prompt": "Question: Select the best translation into predicate logic.George borrows Hector's lawnmower. (g: George; h: Hector; l: Hector's lawnmower; Bxyx: x borrows y from z).\n\nOptions:\nA) Bhgh\nB) Bggh\nC) Bhlh\nD) Bghl\nE) Bhlg\nF) Blhg\nG) Bllg\nH) Blgh\nI) Bhhg\nJ) Bglh",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 46,
+        "correct_answer": "J",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_philosophy_48",
+      "domain": "philosophy",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Philosophy Q48",
+      "prompt": "Question: According to Moore’s “ideal utilitarianism,” the right action is the one that brings about the greatest amount of:\n\nOptions:\nA) wealth.\nB) virtue.\nC) fairness.\nD) pleasure.\nE) peace.\nF) justice.\nG) happiness.\nH) power.\nI) good.\nJ) knowledge.",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 48,
+        "correct_answer": "I",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_philosophy_49",
+      "domain": "philosophy",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Philosophy Q49",
+      "prompt": "Question: What is the sign of the covenant for Jewish males?\n\nOptions:\nA) Fasting on Yom Kippur\nB) Lighting Shabbat candles\nC) The rainbow\nD) Circumcision\nE) The Torah\nF) Bar mitzvah\nG) Keeping kosher\nH) Wearing a kippah\nI) A son\nJ) The Star of David",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 49,
+        "correct_answer": "D",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_law_66",
+      "domain": "law",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Law Q66",
+      "prompt": "Question: Functions of the law include all but which of the following?\n\nOptions:\nA) defining the limits of government power\nB) regulating the use of public spaces\nC) keeping the peace\nD) maximizing individual freedom\nE) maintaining order and stability\nF) preventing environmental degradation\nG) providing a basis for compromise\nH) promoting social justice\nI) promoting the principles of the free enterprise system\nJ) encouraging economic growth",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 66,
+        "correct_answer": "I",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_law_67",
+      "domain": "law",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Law Q67",
+      "prompt": "Question: The ________ School of jurisprudence postulates that the law is based on what is \"correct.\"\n\nOptions:\nA) Legal Pragmatism\nB) Legal Formalism\nC) Comparative\nD) Analytical\nE) Sociological\nF) Historical\nG) Critical Legal Studies\nH) Realist\nI) Positivist\nJ) Natural Law",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 67,
+        "correct_answer": "J",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_law_68",
+      "domain": "law",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Law Q68",
+      "prompt": "Question: Which word best summarizes Weber's explanation of the development of formally rational law?\n\nOptions:\nA) Socialism.\nB) Legitimacy.\nC) Authority.\nD) Democracy.\nE) Bureaucracy.\nF) Conflict.\nG) Capitalism.\nH) Charisma.\nI) Co-operation.\nJ) Tradition.",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 68,
+        "correct_answer": "G",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_law_69",
+      "domain": "law",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Law Q69",
+      "prompt": "Question: A state has recently enacted a statute prohibiting the disposal of any nuclear wastes within the state. This law does not contravene or conflict with any federal statutes. A man operates a company in the state that is engaged in the disposal of nuclear wastes. Subsequent to the passage of the state statute, the man, not yet aware of the new law, entered into contracts with many out-of-state firms to dispose of their nuclear wastes in the state. On account of this new law, however, the man will be unable to perform these contracts. Assume that the man has standing to challenge this state law. Which of the following presents his strongest constitutional grounds to challenge the state law prohibiting the disposal of nuclear wastes within the state?\n\nOptions:\nA) The second amendment - the right to bear arms.\nB) The due process clause of the Fourteenth Amendment.\nC) The tenth amendment - powers not delegated to the United States by the Constitution.\nD) The first amendment - freedom of speech.\nE) The privileges and immunities clause of Article IV\nF) Section 2.\nG) The commerce clause.\nH) The sixth amendment - right to a fair trial.\nI) The eighth amendment - prohibition of cruel and unusual punishment.\nJ) The equal protection clause of the Fourteenth Amendment.",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 69,
+        "correct_answer": "F",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_psychology_60",
+      "domain": "psychology",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Psychology Q60",
+      "prompt": "Question: Pascale is interested in the processing strategies children use to learn new information. Pascale would best be classified as what type of psychologist?\n\nOptions:\nA) social\nB) school\nC) sociocultural\nD) forensic\nE) behaviorist\nF) health\nG) clinical\nH) cognitive\nI) psychoanalytic\nJ) developmental",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 60,
+        "correct_answer": "H",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_psychology_62",
+      "domain": "psychology",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Psychology Q62",
+      "prompt": "Question: According to the Individuals with Disabilities Education Improvement Act, which of the following must an educational agency do before it changes the educational placement of a student with a disability?\n\nOptions:\nA) Notify the parents in writing\nB) Obtain the child's consent\nC) Obtain a court order\nD) Conduct a new evaluation of the child's disability\nE) Discuss with the child's psychologist\nF) Give the child a trial period in the new environment\nG) Obtain parental consent\nH) Notify the local education authority\nI) Arrange a meeting with all teachers and administrators\nJ) Obtain school board approval",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 62,
+        "correct_answer": "A",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_psychology_63",
+      "domain": "psychology",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Psychology Q63",
+      "prompt": "Question: Ani believes that her attitudes and behavior play a central role in what happens to her. Such a belief is likely to be associated with\n\nOptions:\nA) low self-esteem.\nB) a strong id.\nC) a high level of anxiety.\nD) a strong superego.\nE) high levels of self-consciousness.\nF) an external locus of control.\nG) an inferiority complex.\nH) a low level of self-awareness.\nI) low self-efficacy.\nJ) an internal locus of control.",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 63,
+        "correct_answer": "J",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_economics_35",
+      "domain": "economics",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Economics Q35",
+      "prompt": "Question: For a stationary autoregressive process, shocks will\n\nOptions:\nA) Never occur\nB) Persist indefinitely\nC) Cause a permanent change in the trend\nD) Grow exponentially\nE) Only affect the next period\nF) Eventually die away\nG) Cause the process to become non-stationary\nH) Immediately disappear\nI) Lead to a cyclical pattern\nJ) Be balanced out by subsequent shocks",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 35,
+        "correct_answer": "F",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_economics_36",
+      "domain": "economics",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Economics Q36",
+      "prompt": "Question: Consider the following AR(1) model with the disturbances having zero mean and unit variance\nyt = 0.2 + 0.4 yt-1 + ut\nThe (unconditional) mean of y will be given by\n\nOptions:\nA) 0.45\nB) 0.2\nC) 0.4\nD) 0.1\nE) 0.3\nF) 0.55\nG) 0.25\nH) 0.33\nI) 0.6\nJ) 0.5",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 36,
+        "correct_answer": "H",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_economics_38",
+      "domain": "economics",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Economics Q38",
+      "prompt": "Question: Which of the following policies best describes supply-side fiscal policy?\n\nOptions:\nA) Higher taxes on household income\nB) Increased government spending\nC) Increased taxes on corporate profits\nD) Increased import tariffs\nE) Decreased interest rates\nF) Lower taxes on consumer goods\nG) Lower taxes on research and development of new technology\nH) Reduced government spending\nI) Higher taxes on capital gains\nJ) An increase in the money supply",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 38,
+        "correct_answer": "G",
+        "scoring": "exact_match_letter"
+      }
+    }
+  ]
+}

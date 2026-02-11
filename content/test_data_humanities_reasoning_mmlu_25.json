@@ -1,0 +1,356 @@
+{
+  "benchmark": "MMLU humanities/social reasoning equivalent",
+  "notes": "25-case subset (5/domain) for stronger batch statistics.",
+  "test_cases": [
+    {
+      "id": "mmlu_history_55",
+      "domain": "history",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU History Q55",
+      "prompt": "Question: This question refers to the following information.\nIn Russia there was nothing going on well, and [Souvarine] was in despair over the news he had received. His old companions were all turning to the politicians; the famous Nihilists who made Europe tremble-sons of village priests, of the lower middle class, of tradesmen-could not rise above the idea of national liberation, and seemed to believe that the world would be delivered-when they had killed their despot&…\n\"Foolery! They'll never get out of it with their foolery.\"\nThen, lowering his voice still more, in a few bitter words he described his old dream of fraternity. He had renounced his rank and his fortune; he had gone among workmen, only in the hope of seeing at last the foundation of a new society of labour in common. All the sous in his pockets had long gone to the urchins of the settlement; he had been as tender as a brother with the colliers, smiling at their suspicion, winning them over by his quiet workmanlike ways and his dislike of chattering. But decidedly the fusion had not taken place.\nHis voice changed, his eyes grew bright, he fixed them on étienne, directly addressing him:\n\"Now, do you understand that? These hatworkers at Marseilles who have won the great lottery prize of a hundred thousand francs have gone off at once and invested it, declaring that they are going to live without doing anything! Yes, that is your idea, all of you French workmen; you want to unearth a treasure in order to devour it alone afterwards in some lazy, selfish corner. You may cry out as much as you like against the rich, you haven't got courage enough to give back to the poor the money that luck brings you. You will never be worthy of happiness as long as you own anything, and your hatred of the bourgeois proceeds solely from an angry desire to be bourgeois yourselves in their place.\"\némile Zola, French writer, Germinal, 1885\nThe passage displays the direct concern for the welfare of the working classes that was typically a part of which movement?\nOptions:\nA) [Communist, Anarchist, Feminist, Fascist, Imperialist, Nationalist, Enlightenment, Existentialist, N/A, N/A]",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 55,
+        "correct_answer": "A",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_history_56",
+      "domain": "history",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU History Q56",
+      "prompt": "Question: This question refers to the following information.\nThe following excerpt is from a pamphlet.\nYou will do me the justice to remember, that I have always strenuously supported the Right of every man to his own opinion, however different that opinion might be to mine. He who denies to another this right, makes a slave of himself to his present opinion, because he precludes himself the right of changing it.\nThe most formidable weapon against errors of every kind is Reason. I have never used any other, and I trust I never shall.\nThe circumstance that has now taken place in France of the total abolition of the whole national order of priesthood, and of everything appertaining to compulsive systems of religion, and compulsive articles of faith, has not only precipitated my intention, but rendered a work of this kind exceedingly necessary, lest in the general wreck of superstition, of false systems of government, and false theology, we lose sight of morality, of humanity, and of the theology that is true.\nI believe in one God, and no more; and I hope for happiness beyond this life.\nI believe in the equality of man; and I believe that religious duties consist in doing justice, loving mercy, and endeavoring to make our fellow-creatures happy.\nI do not believe in the creed professed by the Jewish church, by the Roman church, by the Greek church, by the Turkish church, by the Protestant church, nor by any church that I know of. My own mind is my own church.\nAll national institutions of churches, whether Jewish, Christian or Turkish, appear to me no other than human inventions, set up to terrify and enslave mankind, and monopolize power and profit.\nI do not mean by this declaration to condemn those who believe otherwise; they have the same right to their belief as I have to mine.\n—Thomas Paine, The Age of Reason, 1794–1795\nWhich of the following Enlightenment philosophes designed a system of checks and balances for government to avoid abuses of power?\nOptions:\nA) [Thomas Hobbes, Jean Jacques Rousseau, Baron Montesquieu, Voltaire, Denis Diderot, Immanuel Kant, David Hume, Mary Wollstonecraft, Adam Smith, John Locke]",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 56,
+        "correct_answer": "C",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_history_57",
+      "domain": "history",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU History Q57",
+      "prompt": "Question: This question refers to the following information.\n\"The struggle against neo-colonialism is not aimed at excluding the capital of the developed world from operating in less developed countries. It is aimed at preventing the financial power of the developed countries being used in such a way as to impoverish the less developed.\nNon-alignment, as practiced by Ghana and many other countries, is based on co-operation with all States whether they be capitalist, socialist or have a mixed economy. Such a policy, therefore, involves foreign investment from capitalist countries, but it must be invested in accordance with a national plan drawn up by the government of the non-aligned State with its own interests in mind. The issue is not what return the foreign investor receives on his investments…The question is one of power. A State in the grip of neo-colonialism is not master of its own destiny.\"\nKwame Nkrumah, Neo-Colonialism, 1965\nWhich of the following provides the best context for Nkrumah's writings?\nOptions:\nA) [The spread of communism, The Industrial Revolution, The French Revolution, The Cold War, Decolonization, World War II, Autarky, The rise of multinational corporations, The American Civil Rights Movement, Regional Free Trade Associations]",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 57,
+        "correct_answer": "E",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_history_58",
+      "domain": "history",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU History Q58",
+      "prompt": "Question: What is the approximate mean cranial capacity of Homo erectus?\nOptions:\nA) [1200 cc, under 650 cc, 1700 cc, 1350 cc, just under 1000 cc, 1500 cc, under 500 cc, about 800 cc, just over 1100 cc, about 900 cc]",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 58,
+        "correct_answer": "E",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_history_59",
+      "domain": "history",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU History Q59",
+      "prompt": "Question: Recent research on hominid species dating from the Middle Pliocene indicates there was (as of 2020):\nOptions:\nA) [multiple hominid species but with limited diversity., a single species with no diversity., decreased species diversity but increased numbers of hammerstones and flakes, indicating stone tool manufacture., a single dominant species that outcompeted all others, leading to decreased diversity., increased species diversity due to a prolonged ice age followed by a severe drought., decreased species diversity due to a prolonged ice age followed by a severe drought., a great amount of species diversity, or a single species that exhibited a lot of diversity., increased species diversity but with decreased population numbers due to harsh climate conditions., increased species diversity but decreased numbers of hammerstones and flakes, indicating less stone tool manufacture., very little species diversity during this period and very few hominids.]",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 59,
+        "correct_answer": "G",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_philosophy_45",
+      "domain": "philosophy",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Philosophy Q45",
+      "prompt": "Question: Which of the given formulas of PL is the best symbolization of the following sentence?\nTurtles live long lives and are happy creatures, unless they are injured.\nOptions:\nA) [(L • H) ≡ I, (L • H) ∨ I, L • (H ∨ I), L • (H ⊃ R)., N/A, N/A, N/A, N/A, N/A, N/A]",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 45,
+        "correct_answer": "B",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_philosophy_46",
+      "domain": "philosophy",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Philosophy Q46",
+      "prompt": "Question: Select the best translation into predicate logic.George borrows Hector's lawnmower. (g: George; h: Hector; l: Hector's lawnmower; Bxyx: x borrows y from z).\nOptions:\nA) [Bhgh, Bggh, Bhlh, Bghl, Bhlg, Blhg, Bllg, Blgh, Bhhg, Bglh]",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 46,
+        "correct_answer": "J",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_philosophy_47",
+      "domain": "philosophy",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Philosophy Q47",
+      "prompt": "Question: The study of reality in the broadest sense, an inquiry into the elemental nature of the universe and the things in it, is known as _____.\nOptions:\nA) [quantum physics, metaphysics, ontology, phenomenology, cosmology, teleology, epistemology, axiology, N/A, N/A]",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 47,
+        "correct_answer": "B",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_philosophy_48",
+      "domain": "philosophy",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Philosophy Q48",
+      "prompt": "Question: According to Moore’s “ideal utilitarianism,” the right action is the one that brings about the greatest amount of:\nOptions:\nA) [wealth., virtue., fairness., pleasure., peace., justice., happiness., power., good., knowledge.]",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 48,
+        "correct_answer": "I",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_philosophy_49",
+      "domain": "philosophy",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Philosophy Q49",
+      "prompt": "Question: What is the sign of the covenant for Jewish males?\nOptions:\nA) [Fasting on Yom Kippur, Lighting Shabbat candles, The rainbow, Circumcision, The Torah, Bar mitzvah, Keeping kosher, Wearing a kippah, A son, The Star of David]",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 49,
+        "correct_answer": "D",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_law_65",
+      "domain": "law",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Law Q65",
+      "prompt": "Question: What is the judge ad hoc?\nOptions:\nA) [Judge ad hoc is the president of the ICJ, Judge ad hoc is a temporary judge appointed for a specific period of time, Judge ad hoc is the judge that each party will always nominate in every contentious case, Judge ad hoc is the member of the bench of the ICJ with a casting vote, Judge ad hoc is a judge who is nominated by the parties involved in a contentious case, irrespective of their nationality, Judge ad hoc is a judge who decides on the admissibility of cases before the ICJ, Judge ad hoc is a judge appointed by the Security Council of the United Nations, Judge ad hoc is a surrogate judge, in case a judge is disqualified or passes away, If a party to a contentious case before the ICJ does not have a national sitting as judge, it is entitled to nominate someone as a judge solely for that case, with the title of judge ad hoc, N/A]",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 65,
+        "correct_answer": "I",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_law_66",
+      "domain": "law",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Law Q66",
+      "prompt": "Question: Functions of the law include all but which of the following?\nOptions:\nA) [defining the limits of government power, regulating the use of public spaces, keeping the peace, maximizing individual freedom, maintaining order and stability, preventing environmental degradation, providing a basis for compromise, promoting social justice, promoting the principles of the free enterprise system, encouraging economic growth]",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 66,
+        "correct_answer": "I",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_law_67",
+      "domain": "law",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Law Q67",
+      "prompt": "Question: The ________ School of jurisprudence postulates that the law is based on what is \"correct.\"\nOptions:\nA) [Legal Pragmatism, Legal Formalism, Comparative, Analytical, Sociological, Historical, Critical Legal Studies, Realist, Positivist, Natural Law]",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 67,
+        "correct_answer": "J",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_law_68",
+      "domain": "law",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Law Q68",
+      "prompt": "Question: Which word best summarizes Weber's explanation of the development of formally rational law?\nOptions:\nA) [Socialism., Legitimacy., Authority., Democracy., Bureaucracy., Conflict., Capitalism., Charisma., Co-operation., Tradition.]",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 68,
+        "correct_answer": "G",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_law_69",
+      "domain": "law",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Law Q69",
+      "prompt": "Question: A state has recently enacted a statute prohibiting the disposal of any nuclear wastes within the state. This law does not contravene or conflict with any federal statutes. A man operates a company in the state that is engaged in the disposal of nuclear wastes. Subsequent to the passage of the state statute, the man, not yet aware of the new law, entered into contracts with many out-of-state firms to dispose of their nuclear wastes in the state. On account of this new law, however, the man will be unable to perform these contracts. Assume that the man has standing to challenge this state law. Which of the following presents his strongest constitutional grounds to challenge the state law prohibiting the disposal of nuclear wastes within the state?\nOptions:\nA) [The second amendment - the right to bear arms., The due process clause of the Fourteenth Amendment., The tenth amendment - powers not delegated to the United States by the Constitution., The first amendment - freedom of speech., The privileges and immunities clause of Article IV, Section 2., The commerce clause., The sixth amendment - right to a fair trial., The eighth amendment - prohibition of cruel and unusual punishment., The equal protection clause of the Fourteenth Amendment., N/A]",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 69,
+        "correct_answer": "F",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_psychology_60",
+      "domain": "psychology",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Psychology Q60",
+      "prompt": "Question: Pascale is interested in the processing strategies children use to learn new information. Pascale would best be classified as what type of psychologist?\nOptions:\nA) [social, school, sociocultural, forensic, behaviorist, health, clinical, cognitive, psychoanalytic, developmental]",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 60,
+        "correct_answer": "H",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_psychology_61",
+      "domain": "psychology",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Psychology Q61",
+      "prompt": "Question: According to Caplan's model of consultee-centered case consultation, the consultant is primarily interested in\nOptions:\nA) [identifying the causes and solutions of the client's presenting problems, establishing a hierarchy of authority to enable effective decision making, ensuring the consultee adheres strictly to a predetermined action plan, proposing multiple alternative solutions for the consultee to choose from, identifying the strengths and weaknesses of the consultee's current approach, presenting a single, well-defined and unambiguous course of action for the consultant to overcome skills deficits, developing a comprehensive treatment plan for the client, identifying and eliminating the causes of the consultee's difficulties in handling a problem, focusing on the consultant's personal growth and development, focusing on the relationship between the client and the consultee]",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 61,
+        "correct_answer": "H",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_psychology_62",
+      "domain": "psychology",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Psychology Q62",
+      "prompt": "Question: According to the Individuals with Disabilities Education Improvement Act, which of the following must an educational agency do before it changes the educational placement of a student with a disability?\nOptions:\nA) [Notify the parents in writing, Obtain the child's consent, Obtain a court order, Conduct a new evaluation of the child's disability, Discuss with the child's psychologist, Give the child a trial period in the new environment, Obtain parental consent, Notify the local education authority, Arrange a meeting with all teachers and administrators, Obtain school board approval]",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 62,
+        "correct_answer": "A",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_psychology_63",
+      "domain": "psychology",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Psychology Q63",
+      "prompt": "Question: Ani believes that her attitudes and behavior play a central role in what happens to her. Such a belief is likely to be associated with\nOptions:\nA) [low self-esteem., a strong id., a high level of anxiety., a strong superego., high levels of self-consciousness., an external locus of control., an inferiority complex., a low level of self-awareness., low self-efficacy., an internal locus of control.]",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 63,
+        "correct_answer": "J",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_psychology_64",
+      "domain": "psychology",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Psychology Q64",
+      "prompt": "Question: In terms of Hofstede’s (1980) five cultural dimensions, the United States scores at the top of the scale on:\nOptions:\nA) [individualism and long-term orientation., individualism and power distance., uncertainty avoidance., long-term orientation., individualism., individualism and masculinity., long-term orientation and uncertainty avoidance., power distance., power distance and masculinity., N/A]",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 64,
+        "correct_answer": "E",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_economics_35",
+      "domain": "economics",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Economics Q35",
+      "prompt": "Question: For a stationary autoregressive process, shocks will\nOptions:\nA) [Never occur, Persist indefinitely, Cause a permanent change in the trend, Grow exponentially, Only affect the next period, Eventually die away, Cause the process to become non-stationary, Immediately disappear, Lead to a cyclical pattern, Be balanced out by subsequent shocks]",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 35,
+        "correct_answer": "F",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_economics_36",
+      "domain": "economics",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Economics Q36",
+      "prompt": "Question: Consider the following AR(1) model with the disturbances having zero mean and unit variance\nyt = 0.2 + 0.4 yt-1 + ut\nThe (unconditional) mean of y will be given by\nOptions:\nA) 0.45\nB) 0.2\nC) 0.4\nD) 0.1\nE) 0.3\nF) 0.55\nG) 0.25\nH) 0.33\nI) 0.6\nJ) 0.5",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 36,
+        "correct_answer": "H",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_economics_37",
+      "domain": "economics",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Economics Q37",
+      "prompt": "Question: Suppose that a test statistic has associated with it a p-value of 0.08. Which one of the following statements is true?\n(i) If the size of the test were exactly 8%, we would be indifferent between rejecting and not rejecting the null hypothesis\n(ii) The null would be rejected if a 10% size of test were used\n(iii) The null would not be rejected if a 1% size of test were used\n(iv) The null would be rejected if a 5% size of test were used.\nOptions:\nA) [(iii) and (iv) only, (i) and (iv) only, (i), (ii), and (iii) only, (i) and (ii) only, (i) and (iii) only, (i), (ii), (iii), and (iv)., (ii), (iii), and (iv) only, (ii) and (iii) only, (ii) and (iv) only, (i), (iii), and (iv) only]",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 37,
+        "correct_answer": "C",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_economics_38",
+      "domain": "economics",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Economics Q38",
+      "prompt": "Question: Which of the following policies best describes supply-side fiscal policy?\nOptions:\nA) [Higher taxes on household income, Increased government spending, Increased taxes on corporate profits, Increased import tariffs, Decreased interest rates, Lower taxes on consumer goods, Lower taxes on research and development of new technology, Reduced government spending, Higher taxes on capital gains, An increase in the money supply]",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 38,
+        "correct_answer": "G",
+        "scoring": "exact_match_letter"
+      }
+    },
+    {
+      "id": "mmlu_economics_39",
+      "domain": "economics",
+      "complexity": "reasoning_heavy",
+      "title": "MMLU Economics Q39",
+      "prompt": "Question: The concentration ratio for a monopoly is\nOptions:\nA) [50, 5, 10, 90, 15, 100, 0, 25, 75, N/A]",
+      "metadata": {
+        "source_benchmark": "MMLU (Hendrycks et al., 2021)",
+        "subset": "humanities_social_reasoning_equivalent",
+        "question_id": 39,
+        "correct_answer": "F",
+        "scoring": "exact_match_letter"
+      }
+    }
+  ]
+}

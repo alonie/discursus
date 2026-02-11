@@ -298,8 +298,69 @@ def load_test_cases(filepath: str) -> dict:
         cases["Default Scenario"] = "A mid-sized country faces a resurgence of a novel respiratory virus. Vaccination rates have plateaued between 45-65%, ICU capacity varies between 75-95% across regions, and economic recovery remains fragile. Recent epidemiological studies suggest transmission rates may be 30-60% higher than initial models predicted. The government is considering reintroducing strict lockdowns for 4-8 weeks to suppress transmission before winter. Should it do so? Justify your position with evidence-backed analysis of epidemiological risk, economic stability, civil liberties, and public trust. Provide specific citations for key empirical claims and measurable predictions your approach would generate."
     return cases
 
-# Load test cases at startup from the new file
-TEST_CASES = load_test_cases("content/4domains_3complexity_16testcases_4Oct25.json")
+# Load test cases at startup, allowing dataset overrides via env var.
+DEFAULT_TEST_CASES_PATH = "content/4domains_3complexity_16testcases_4Oct25.json"
+TEST_CASES_PATH = os.getenv("TEST_CASES_PATH", DEFAULT_TEST_CASES_PATH)
+TEST_CASES = load_test_cases(TEST_CASES_PATH)
+
+DEFAULT_BENCHMARK_CASES_PATH = "content/test_data_humanities_reasoning_mmlu_25.json"
+AUTO_HLE_BENCHMARK_PATH = "content/test_data_hle_100.json"
+BENCHMARK_CASES_PATH = os.getenv(
+    "BENCHMARK_CASES_PATH",
+    AUTO_HLE_BENCHMARK_PATH if os.path.exists(AUTO_HLE_BENCHMARK_PATH) else DEFAULT_BENCHMARK_CASES_PATH,
+)
+
+def load_benchmark_cases(filepath: str) -> dict:
+    """Loads benchmark cases keyed by dropdown title."""
+    cases = {}
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        for case in data.get("test_cases", []):
+            title = case.get("title")
+            domain = case.get("domain")
+            complexity = case.get("complexity")
+            prompt = case.get("prompt")
+            if all([title, domain, complexity, prompt]):
+                display_title = f"[{domain.replace('_', ' ').title()}/{complexity.title()}] {title}"
+                cases[display_title] = case
+    except (FileNotFoundError, json.JSONDecodeError):
+        pass
+    return cases
+
+BENCHMARK_CASES = load_benchmark_cases(BENCHMARK_CASES_PATH)
+
+def _scan_benchmark_files(content_dir: str) -> dict:
+    """
+    Discover benchmark JSON files in content/ that include a `test_cases` list.
+    Returns: {display_label: file_path}
+    """
+    options = {}
+    try:
+        for filename in sorted(os.listdir(content_dir)):
+            if not filename.endswith(".json"):
+                continue
+            path = os.path.join(content_dir, filename)
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                cases = data.get("test_cases", [])
+                if not isinstance(cases, list) or not cases:
+                    continue
+                benchmark_name = data.get("benchmark", "Benchmark")
+                notes = data.get("notes", "")
+                short_notes = (notes[:70] + "…") if len(notes) > 70 else notes
+                label = f"{filename} | {benchmark_name} | n={len(cases)}"
+                if short_notes:
+                    label += f" | {short_notes}"
+                options[label] = path
+            except Exception:
+                continue
+    except Exception:
+        return {}
+    return options
+
+BENCHMARK_FILE_OPTIONS = _scan_benchmark_files(CONTENT_DIR)
 
 # Add demo scenarios to showcase ensemble capabilities - put them first for visibility
 demo_cases = {}
@@ -319,6 +380,8 @@ ordered_cases.update(TEST_CASES)
 TEST_CASES = ordered_cases
 
 print(f"DEBUG: Total test cases loaded: {len(TEST_CASES)}")
+print(f"DEBUG: Test cases file: {TEST_CASES_PATH}")
+print(f"DEBUG: Benchmark cases loaded: {len(BENCHMARK_CASES)} from {BENCHMARK_CASES_PATH}")
 print(f"DEBUG: Demo scenarios: {[k for k in TEST_CASES.keys() if '🎯' in k]}")
 print(f"DEBUG: First 5 keys: {list(TEST_CASES.keys())[:5]}")
 
@@ -684,6 +747,607 @@ def handle_review(history: List[dict], primary_model: str, uploaded_files, revie
     yield history, _badge_html("Token Count", str(tokens)), _badge_html("Estimated Cost", f"${cost:.4f}")
 
 
+BENCHMARK_INITIAL_TEMPLATE = (
+    "You are answering a benchmark multiple-choice question.\n"
+    "Think carefully, show concise reasoning, and end with exactly one line in this format:\n"
+    "Final Answer: <LETTER>\n\n"
+    "Question:\n{question}"
+)
+
+BENCHMARK_CRITIQUE_TEMPLATE = (
+    "You are an adversarial critic. Evaluate the initial answer for factual errors, reasoning flaws, "
+    "option elimination mistakes, and overconfidence.\n"
+    "Recommend whether the answer should change. End with:\n"
+    "Recommended Answer: <LETTER>\n\n"
+    "Question:\n{question}\n\n"
+    "Initial Answer:\n{initial_answer}"
+)
+
+BENCHMARK_REVIEW_TEMPLATE = (
+    "Revise the answer using the critique. Keep reasoning concise and resolve errors explicitly.\n"
+    "End with exactly one line:\n"
+    "Final Answer: <LETTER>\n\n"
+    "Question:\n{question}\n\n"
+    "Initial Answer:\n{initial_answer}\n\n"
+    "Critique:\n{critique}"
+)
+
+def _safe_format(template: str, **kwargs) -> str:
+    """Best-effort format that tolerates user-edited templates."""
+    if not template:
+        return ""
+    try:
+        return template.format(**kwargs)
+    except Exception:
+        formatted = template
+        for k, v in kwargs.items():
+            formatted = formatted.replace("{" + k + "}", str(v))
+        return formatted
+
+def _extract_answer_letter(text: str) -> str:
+    """Extract A-J answer letter from model output."""
+    if not text:
+        return ""
+    patterns = [
+        r"(?im)final\s+answer\s*[:\-]\s*\(?([A-J])\)?",
+        r"(?im)recommended\s+answer\s*[:\-]\s*\(?([A-J])\)?",
+        r"(?im)the\s+answer\s+is\s*\(?([A-J])\)?",
+        r"\(([A-J])\)",
+    ]
+    for pattern in patterns:
+        m = re.search(pattern, text)
+        if m:
+            return m.group(1)
+
+    # Last fallback: final standalone A-J token
+    matches = re.findall(r"\b([A-J])\b", text)
+    return matches[-1] if matches else ""
+
+def _extract_answer_text(text: str) -> str:
+    """Extract free-text answer from common completion formats."""
+    if not text:
+        return ""
+    patterns = [
+        r"(?im)^\s*final\s+answer\s*[:\-]\s*(.+?)\s*$",
+        r"(?im)^\s*recommended\s+answer\s*[:\-]\s*(.+?)\s*$",
+        r"(?im)^\s*answer\s*[:\-]\s*(.+?)\s*$",
+    ]
+    for pattern in patterns:
+        matches = re.findall(pattern, text)
+        if matches:
+            return matches[-1].strip()
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    return lines[-1] if lines else ""
+
+def _normalize_answer_text(text: str) -> str:
+    s = (text or "").strip().lower()
+    # Normalize punctuation and spacing for exact-match style benchmarks.
+    s = re.sub(r"\s+", " ", s)
+    s = re.sub(r"[\"'`]", "", s)
+    s = s.strip(" .,:;!?")
+    return s
+
+def _answers_equivalent(a: str, b: str) -> bool:
+    if not a or not b:
+        return False
+    a = a.strip()
+    b = b.strip()
+    if len(a) == 1 and len(b) == 1 and a.upper() in "ABCDEFGHIJ" and b.upper() in "ABCDEFGHIJ":
+        return a.upper() == b.upper()
+    na = _normalize_answer_text(a)
+    nb = _normalize_answer_text(b)
+    if na == nb:
+        return True
+    # Secondary leniency: remove all whitespace.
+    return re.sub(r"\s+", "", na) == re.sub(r"\s+", "", nb)
+
+def _key_from_metadata(metadata: dict) -> Tuple[str, str]:
+    """Return (key_value, key_mode) where key_mode in {letter,text,none}."""
+    key_letter = (metadata.get("correct_answer") or "").strip()
+    if key_letter:
+        return key_letter, "letter"
+    key_text = (metadata.get("expected_answer_text") or "").strip()
+    if key_text:
+        return key_text, "text"
+    return "", "none"
+
+def _score_response_for_case(response_text: str, metadata: dict) -> Tuple[str, str, bool, str]:
+    """
+    Return (predicted, score_label, is_correct, key_display).
+    Uses metadata scoring mode when available, and falls back appropriately.
+    """
+    metadata = metadata or {}
+    key_value, key_mode = _key_from_metadata(metadata)
+    scoring_mode = (metadata.get("scoring") or "").strip().lower()
+
+    if key_mode == "none":
+        # Still try to extract something so extraction-rate can be measured.
+        pred_letter = _extract_answer_letter(response_text)
+        pred_text = _extract_answer_text(response_text)
+        predicted = pred_letter or pred_text
+        return predicted, "Unscored (no answer key)", False, "N/A"
+
+    if key_mode == "letter":
+        predicted = _extract_answer_letter(response_text)
+        if not predicted:
+            return "", f"Incorrect (no extractable answer; expected {key_value})", False, key_value
+        is_correct = _answers_equivalent(predicted, key_value)
+        return predicted, ("Correct" if is_correct else f"Incorrect (expected {key_value})"), is_correct, key_value
+
+    # key_mode == text
+    # Prefer explicit answer-text extraction; for MCQ-like outputs, fall back to letter only if key is letter-like.
+    predicted_text = _extract_answer_text(response_text)
+    if not predicted_text:
+        predicted_text = response_text.strip()
+    if not predicted_text:
+        return "", "Incorrect (no extractable answer)", False, key_value
+    # For HLE exactMatch-like tasks, use normalized exact text comparison.
+    is_correct = _answers_equivalent(predicted_text, key_value)
+    if scoring_mode not in {"exact_match_text", "manual_or_custom", "exactmatch"}:
+        # Unknown mode but text key exists; still evaluate via normalized exact match.
+        is_correct = _answers_equivalent(predicted_text, key_value)
+    return predicted_text, ("Correct" if is_correct else "Incorrect"), is_correct, key_value
+
+def _short_cell(text: str, limit: int = 48) -> str:
+    s = str(text or "")
+    return s if len(s) <= limit else (s[: limit - 1] + "…")
+
+def _score_mcq_response(response_text: str, correct_answer: str) -> Tuple[str, str, bool]:
+    """Return (predicted, score_label, is_correct)."""
+    predicted = _extract_answer_letter(response_text)
+    if not correct_answer:
+        return predicted, "No answer key available", False
+    if not predicted:
+        return "", f"Incorrect (no extractable answer; expected {correct_answer})", False
+    is_correct = predicted == correct_answer
+    return predicted, ("Correct" if is_correct else f"Incorrect (expected {correct_answer})"), is_correct
+
+def _extract_change_decision(text: str) -> str:
+    """Extract explicit KEEP/CHANGE decisions when present."""
+    if not text:
+        return ""
+    m = re.search(r"(?im)change\s+decision\s*[:\-]\s*(KEEP|CHANGE)\b", text)
+    return m.group(1).upper() if m else ""
+
+def _has_evidence_signal(text: str) -> bool:
+    """Heuristic check for non-trivial justification language."""
+    if not text:
+        return False
+    return bool(re.search(r"(?i)\b(because|since|therefore|however|evidence|incorrect|error|flaw|misread|eliminate)\b", text))
+
+def _apply_revision_guardrail(
+    initial_pred: str,
+    revised_pred: str,
+    critique_text: str,
+    review_text: str,
+    mode: str = "conservative",
+) -> Tuple[str, str]:
+    """
+    Decide whether to accept revised answer.
+    Default is conservative: keep initial unless critique/review provide explicit support for change.
+    """
+    mode = (mode or "conservative").strip().lower()
+
+    if not initial_pred and revised_pred:
+        return revised_pred, "accept_revised_no_initial"
+    if not revised_pred:
+        return initial_pred, "keep_initial_no_revised"
+    if revised_pred == initial_pred:
+        return initial_pred, "no_change"
+
+    if mode == "off":
+        return revised_pred, "guardrail_off_accept_revised"
+
+    critique_rec = _extract_answer_text(critique_text)
+    if len(critique_rec) == 1 and critique_rec.upper() in "ABCDEFGHIJ":
+        critique_rec = critique_rec.upper()
+    review_decision = _extract_change_decision(review_text)
+    critique_flags_initial_wrong = bool(
+        re.search(r"(?is)\binitial\b.{0,80}\b(wrong|incorrect|error|flaw|misread)\b", critique_text)
+        or re.search(r"(?is)\b(wrong|incorrect|error|flaw|misread)\b.{0,80}\binitial\b", critique_text)
+    )
+    evidence_present = _has_evidence_signal(critique_text) and _has_evidence_signal(review_text)
+
+    support_for_revised = (_answers_equivalent(critique_rec, revised_pred) and critique_rec != "") or critique_flags_initial_wrong
+
+    if mode == "balanced":
+        # Balanced mode: allow updates with critique support and any evidence signal.
+        should_change = support_for_revised and (_has_evidence_signal(critique_text) or _has_evidence_signal(review_text))
+    else:
+        # Conservative mode: require stronger support.
+        should_change = support_for_revised and evidence_present
+
+    if review_decision == "KEEP":
+        should_change = False
+    elif review_decision == "CHANGE" and support_for_revised:
+        should_change = True
+
+    if should_change:
+        return revised_pred, f"accept_revised_supported_{mode}"
+    return initial_pred, "guardrail_keep_initial"
+
+def _default_benchmark_title() -> str:
+    return next(iter(BENCHMARK_CASES.keys()), "")
+
+def _benchmark_question_text(case_title: str) -> str:
+    case = BENCHMARK_CASES.get(case_title) or {}
+    return case.get("prompt", "")
+
+def _default_benchmark_file_label() -> str:
+    for label, path in BENCHMARK_FILE_OPTIONS.items():
+        if path == BENCHMARK_CASES_PATH:
+            return label
+    return next(iter(BENCHMARK_FILE_OPTIONS.keys()), "No benchmark files found")
+
+def _cost_delta(model_name: str, input_tokens: int = 0, output_tokens: int = 0) -> float:
+    info = MODEL_MAP.get(model_name, {})
+    input_cost_pm = info.get("input_cost_pm", 0.0)
+    output_cost_pm = info.get("output_cost_pm", 0.0)
+    return (input_tokens / 1_000_000) * input_cost_pm + (output_tokens / 1_000_000) * output_cost_pm
+
+def _live_cost_text(total_input_tokens: int, total_output_tokens: int, total_cost: float) -> str:
+    return (
+        f"Input tokens: {total_input_tokens} | "
+        f"Output tokens: {total_output_tokens} | "
+        f"Estimated cost: ${total_cost:.6f}"
+    )
+
+def _log_benchmark(message: str):
+    """Timestamped terminal logging for benchmark runs."""
+    ts = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+    print(f"[BENCHMARK {ts}] {message}", flush=True)
+
+def run_benchmark_case(
+    case_title: str,
+    initial_model: str,
+    critique_model: str,
+    review_model: str,
+    initial_template: str,
+    critique_template: str,
+    review_template: str,
+    guardrail_mode: str,
+    use_openrouter: bool,
+) -> Generator:
+    """Run sequential initial -> critique -> review for one benchmark case."""
+    _log_benchmark(f"Single-case run started | case='{case_title}' | guardrail='{guardrail_mode}'")
+    encoder = get_encoder()
+    total_input_tokens = 0
+    total_output_tokens = 0
+    total_cost = 0.0
+
+    def cost_snapshot() -> str:
+        return _live_cost_text(total_input_tokens, total_output_tokens, total_cost)
+
+    case = BENCHMARK_CASES.get(case_title)
+    if not case:
+        msg = "Benchmark case not found."
+        yield msg, "", "N/A", "", "", "N/A", "No run performed.", "Idle.", msg, cost_snapshot()
+        return
+
+    question = case.get("prompt", "")
+    metadata = case.get("metadata", {})
+
+    initial_prompt = _safe_format(initial_template, question=question)
+    critique_prompt = ""
+    review_prompt = ""
+
+    initial_input_tokens = count_tokens(initial_prompt, encoder)
+    total_input_tokens += initial_input_tokens
+    total_cost += _cost_delta(initial_model, input_tokens=initial_input_tokens)
+    yield question, "", "Running...", "", "", "Pending", "", "Starting initial answer stage...", "Initial answer stage started.", cost_snapshot()
+    initial_response = ""
+    for chunk in stream_model([{"role": "user", "content": initial_prompt}], initial_model, use_openrouter):
+        initial_response += chunk
+        chunk_tokens = count_tokens(chunk, encoder)
+        total_output_tokens += chunk_tokens
+        total_cost += _cost_delta(initial_model, output_tokens=chunk_tokens)
+        yield question, initial_response, "Running...", "", "", "Pending", "", "Initial answer stage...", "Initial answer streaming...", cost_snapshot()
+
+    initial_pred, initial_score, initial_correct, key_display = _score_response_for_case(initial_response, metadata)
+    initial_score_label = f"{initial_score} | Predicted: {initial_pred or 'N/A'} | Key: {key_display}"
+    yield question, initial_response, initial_score_label, "", "", "Pending", "", "Starting critique stage...", "Initial answer completed. Starting critique.", cost_snapshot()
+
+    critique_prompt = _safe_format(
+        critique_template,
+        question=question,
+        initial_answer=initial_response,
+    )
+    critique_input_tokens = count_tokens(critique_prompt, encoder)
+    total_input_tokens += critique_input_tokens
+    total_cost += _cost_delta(critique_model, input_tokens=critique_input_tokens)
+    critique_response = ""
+    for chunk in stream_model([{"role": "user", "content": critique_prompt}], critique_model, use_openrouter):
+        critique_response += chunk
+        chunk_tokens = count_tokens(chunk, encoder)
+        total_output_tokens += chunk_tokens
+        total_cost += _cost_delta(critique_model, output_tokens=chunk_tokens)
+        yield question, initial_response, initial_score_label, critique_response, "", "Pending", "", "Critique stage...", "Critique streaming...", cost_snapshot()
+
+    yield question, initial_response, initial_score_label, critique_response, "", "Running...", "", "Starting review stage...", "Critique completed. Starting review.", cost_snapshot()
+    review_prompt = _safe_format(
+        review_template,
+        question=question,
+        initial_answer=initial_response,
+        critique=critique_response,
+    )
+    review_input_tokens = count_tokens(review_prompt, encoder)
+    total_input_tokens += review_input_tokens
+    total_cost += _cost_delta(review_model, input_tokens=review_input_tokens)
+    revised_response = ""
+    for chunk in stream_model([{"role": "user", "content": review_prompt}], review_model, use_openrouter):
+        revised_response += chunk
+        chunk_tokens = count_tokens(chunk, encoder)
+        total_output_tokens += chunk_tokens
+        total_cost += _cost_delta(review_model, output_tokens=chunk_tokens)
+        yield question, initial_response, initial_score_label, critique_response, revised_response, "Running...", "", "Review stage...", "Review streaming...", cost_snapshot()
+
+    revised_pred, revised_score, revised_correct, key_display = _score_response_for_case(revised_response, metadata)
+    revised_score_label = f"{revised_score} | Predicted: {revised_pred or 'N/A'} | Key: {key_display}"
+
+    final_pred, guardrail_reason = _apply_revision_guardrail(
+        initial_pred,
+        revised_pred,
+        critique_response,
+        revised_response,
+        mode=guardrail_mode,
+    )
+    key_value, key_mode = _key_from_metadata(metadata)
+    final_correct = _answers_equivalent(final_pred, key_value) if key_mode != "none" else False
+    final_score = "Correct" if final_correct else ("Incorrect" if key_mode != "none" else "Unscored (no answer key)")
+    final_score_label = (
+        f"{final_score} | Final (guardrailed): {final_pred or 'N/A'} | "
+        f"Raw revised: {revised_pred or 'N/A'} | Key: {key_display} | Guardrail: {guardrail_reason}"
+    )
+    if key_mode == "none":
+        delta = "unscored"
+    else:
+        delta = "improved" if (not initial_correct and final_correct) else "no_change" if initial_correct == final_correct else "regressed"
+    summary = (
+        f"Case: {case_title}\n"
+        f"Initial model: {initial_model} -> {initial_score_label}\n"
+        f"Critique model: {critique_model}\n"
+        f"Review model: {review_model} -> Raw revised: {revised_score_label}\n"
+        f"Guardrail mode: {guardrail_mode}\n"
+        f"Final (guardrailed): {final_score_label}\n"
+        f"Ensemble delta: {delta}"
+    )
+    _log_benchmark(
+        f"Single-case run completed | case='{case_title}' | initial={initial_pred or 'N/A'} | "
+        f"revised={revised_pred or 'N/A'} | final={final_pred or 'N/A'} | guardrail_reason={guardrail_reason}"
+    )
+    yield question, initial_response, initial_score_label, critique_response, revised_response, final_score_label, summary, "Completed.", "Completed.", cost_snapshot()
+
+def run_benchmark_batch(
+    initial_model: str,
+    critique_model: str,
+    review_model: str,
+    initial_template: str,
+    critique_template: str,
+    review_template: str,
+    guardrail_mode: str,
+    max_cases: int,
+    use_openrouter: bool,
+) -> Generator:
+    """Run sequential ensemble across multiple benchmark cases and report aggregate metrics."""
+    _log_benchmark(
+        f"Batch run started | guardrail='{guardrail_mode}' | max_cases={max_cases} | "
+        f"models=({initial_model}, {critique_model}, {review_model})"
+    )
+    encoder = get_encoder()
+    total_input_tokens = 0
+    total_output_tokens = 0
+    total_cost = 0.0
+
+    def cost_snapshot() -> str:
+        return _live_cost_text(total_input_tokens, total_output_tokens, total_cost)
+
+    try:
+        all_titles = list(BENCHMARK_CASES.keys())
+        if not all_titles:
+            msg = "No benchmark cases loaded."
+            yield msg, "No run performed.", "", msg, cost_snapshot()
+            return
+
+        selected_titles = all_titles[: max(1, int(max_cases))]
+        total = len(selected_titles)
+        results = []
+        _log_benchmark(f"Batch selected {total} case(s)")
+
+        yield f"Running batch benchmark on {total} case(s)...", "Starting batch...", "", f"Starting batch run with {total} case(s).", cost_snapshot()
+
+        for idx, case_title in enumerate(selected_titles, start=1):
+            case_started = time.time()
+            _log_benchmark(f"[{idx}/{total}] Case start | {case_title}")
+            try:
+                case = BENCHMARK_CASES.get(case_title, {})
+                question = case.get("prompt", "")
+                case_metadata = case.get("metadata", {}) or {}
+
+                initial_prompt = _safe_format(initial_template, question=question)
+                stage_input_tokens = count_tokens(initial_prompt, encoder)
+                total_input_tokens += stage_input_tokens
+                total_cost += _cost_delta(initial_model, input_tokens=stage_input_tokens)
+                _log_benchmark(f"[{idx}/{total}] Initial stage start | {case_title}")
+                initial_response = ""
+                for chunk in stream_model([{"role": "user", "content": initial_prompt}], initial_model, use_openrouter):
+                    initial_response += chunk
+                    chunk_tokens = count_tokens(chunk, encoder)
+                    total_output_tokens += chunk_tokens
+                    total_cost += _cost_delta(initial_model, output_tokens=chunk_tokens)
+                _log_benchmark(f"[{idx}/{total}] Initial stage end | {case_title} | chars={len(initial_response)}")
+                initial_pred, _, initial_ok, key_display = _score_response_for_case(initial_response, case_metadata)
+
+                critique_prompt = _safe_format(
+                    critique_template,
+                    question=question,
+                    initial_answer=initial_response,
+                )
+                stage_input_tokens = count_tokens(critique_prompt, encoder)
+                total_input_tokens += stage_input_tokens
+                total_cost += _cost_delta(critique_model, input_tokens=stage_input_tokens)
+                _log_benchmark(f"[{idx}/{total}] Critique stage start | {case_title}")
+                critique_response = ""
+                for chunk in stream_model([{"role": "user", "content": critique_prompt}], critique_model, use_openrouter):
+                    critique_response += chunk
+                    chunk_tokens = count_tokens(chunk, encoder)
+                    total_output_tokens += chunk_tokens
+                    total_cost += _cost_delta(critique_model, output_tokens=chunk_tokens)
+                _log_benchmark(f"[{idx}/{total}] Critique stage end | {case_title} | chars={len(critique_response)}")
+
+                review_prompt = _safe_format(
+                    review_template,
+                    question=question,
+                    initial_answer=initial_response,
+                    critique=critique_response,
+                )
+                stage_input_tokens = count_tokens(review_prompt, encoder)
+                total_input_tokens += stage_input_tokens
+                total_cost += _cost_delta(review_model, input_tokens=stage_input_tokens)
+                _log_benchmark(f"[{idx}/{total}] Review stage start | {case_title}")
+                revised_response = ""
+                for chunk in stream_model([{"role": "user", "content": review_prompt}], review_model, use_openrouter):
+                    revised_response += chunk
+                    chunk_tokens = count_tokens(chunk, encoder)
+                    total_output_tokens += chunk_tokens
+                    total_cost += _cost_delta(review_model, output_tokens=chunk_tokens)
+                _log_benchmark(f"[{idx}/{total}] Review stage end | {case_title} | chars={len(revised_response)}")
+
+                revised_pred, _, revised_ok, key_display = _score_response_for_case(revised_response, case_metadata)
+                final_pred, guardrail_reason = _apply_revision_guardrail(
+                    initial_pred,
+                    revised_pred,
+                    critique_response,
+                    revised_response,
+                    mode=guardrail_mode,
+                )
+                key_value, key_mode = _key_from_metadata(case_metadata)
+                final_ok = _answers_equivalent(final_pred, key_value) if key_mode != "none" else False
+            except Exception as case_err:
+                _log_benchmark(f"[{idx}/{total}] Case error | {case_title} | {type(case_err).__name__}: {case_err}")
+                results.append({
+                    "case": case_title,
+                    "domain": "unknown",
+                    "key": "N/A",
+                    "initial_pred": "ERR",
+                    "initial_correct": False,
+                    "revised_pred": "ERR",
+                    "revised_correct": False,
+                    "final_pred": "ERR",
+                    "final_correct": False,
+                    "guardrail": f"error:{type(case_err).__name__}",
+                    "delta": "error",
+                })
+                yield (
+                    f"Running batch benchmark on {total} case(s)...",
+                    f"Progress: {idx}/{total} (latest: {case_title})",
+                    "",
+                    f"Error on {case_title}: {type(case_err).__name__}",
+                    cost_snapshot(),
+                )
+                continue
+
+            if key_mode == "none":
+                delta = "unscored"
+            else:
+                if not initial_ok and final_ok:
+                    delta = "improved"
+                elif initial_ok and not final_ok:
+                    delta = "regressed"
+                else:
+                    delta = "no_change"
+
+            results.append({
+                "case": case_title,
+                "domain": case.get("domain", "unknown"),
+                "key": key_display or "N/A",
+                "initial_pred": initial_pred or "N/A",
+                "initial_correct": initial_ok,
+                "revised_pred": revised_pred or "N/A",
+                "revised_correct": revised_ok,
+                "final_pred": final_pred or "N/A",
+                "final_correct": final_ok,
+                "scoreable": key_mode != "none",
+                "guardrail": guardrail_reason,
+                "delta": delta,
+            })
+            _log_benchmark(
+                f"[{idx}/{total}] Case done | {case_title} | initial={initial_pred or 'N/A'} "
+                f"revised={revised_pred or 'N/A'} final={final_pred or 'N/A'} "
+                f"delta={delta} elapsed={time.time()-case_started:.1f}s"
+            )
+
+            yield (
+                f"Running batch benchmark on {total} case(s)...",
+                f"Progress: {idx}/{total} (latest: {case_title})",
+                "",
+                f"Processed {idx}/{total}: {case_title}",
+                cost_snapshot(),
+            )
+
+        scoreable_n = sum(1 for r in results if r.get("scoreable"))
+        unscoreable_n = len(results) - scoreable_n
+        initial_hits = sum(1 for r in results if r.get("scoreable") and r["initial_correct"])
+        final_hits = sum(1 for r in results if r.get("scoreable") and r["final_correct"])
+        initial_extract = sum(1 for r in results if (r.get("initial_pred") or "") not in {"", "N/A", "ERR"})
+        revised_extract = sum(1 for r in results if (r.get("revised_pred") or "") not in {"", "N/A", "ERR"})
+        improved = sum(1 for r in results if r["delta"] == "improved")
+        regressed = sum(1 for r in results if r["delta"] == "regressed")
+        unchanged = sum(1 for r in results if r["delta"] == "no_change")
+        unscored_delta = sum(1 for r in results if r["delta"] == "unscored")
+
+        by_domain = {}
+        for r in results:
+            d = r["domain"]
+            by_domain.setdefault(d, {"n": 0, "scoreable": 0, "initial": 0, "revised": 0})
+            by_domain[d]["n"] += 1
+            by_domain[d]["scoreable"] += int(r.get("scoreable", False))
+            by_domain[d]["initial"] += int(r["initial_correct"] and r.get("scoreable", False))
+            by_domain[d]["revised"] += int(r["final_correct"] and r.get("scoreable", False))
+
+        summary = (
+            f"Cases: {total}\n"
+            f"Guardrail mode: {guardrail_mode}\n"
+            f"Scoreable cases: {scoreable_n}/{total} ({(100*scoreable_n/total):.1f}%)\n"
+            f"Unscored cases (no key): {unscoreable_n}\n"
+            f"Initial answer extraction: {initial_extract}/{total} ({(100*initial_extract/total):.1f}%)\n"
+            f"Revised answer extraction: {revised_extract}/{total} ({(100*revised_extract/total):.1f}%)\n"
+            f"Initial accuracy on scored subset: {initial_hits}/{scoreable_n if scoreable_n else 1} ({(100*initial_hits/(scoreable_n if scoreable_n else 1)):.1f}%)\n"
+            f"Final guardrailed accuracy on scored subset: {final_hits}/{scoreable_n if scoreable_n else 1} ({(100*final_hits/(scoreable_n if scoreable_n else 1)):.1f}%)\n"
+            f"Delta: improved={improved}, regressed={regressed}, no_change={unchanged}, unscored={unscored_delta}\n\n"
+            "By domain:\n" +
+            "\n".join(
+                f"- {d}: scored {v['scoreable']}/{v['n']}, "
+                f"initial {v['initial']}/{v['scoreable'] if v['scoreable'] else 1} "
+                f"({(100*v['initial']/(v['scoreable'] if v['scoreable'] else 1)):.1f}%), "
+                f"revised {v['revised']}/{v['scoreable'] if v['scoreable'] else 1} "
+                f"({(100*v['revised']/(v['scoreable'] if v['scoreable'] else 1)):.1f}%)"
+                for d, v in sorted(by_domain.items())
+            )
+        )
+
+        lines = [
+            "| Case | Domain | Key | Initial | Revised (Raw) | Final (Guardrailed) | Delta | Guardrail |",
+            "|---|---|---|---|---|---|---|---|",
+        ]
+        for r in results:
+            lines.append(
+                f"| {_short_cell(r['case'])} | {_short_cell(r['domain'])} | {_short_cell(r['key'])} | "
+                f"{_short_cell(r['initial_pred'])} ({'✓' if r['initial_correct'] else '✗'}) | "
+                f"{_short_cell(r['revised_pred'])} ({'✓' if r['revised_correct'] else '✗'}) | "
+                f"{_short_cell(r['final_pred'])} ({'✓' if r['final_correct'] else '✗'}) | {r['delta']} | {_short_cell(r['guardrail'])} |"
+            )
+        detail_md = "\n".join(lines)
+
+        yield "Batch run completed.", summary, detail_md, "Batch completed.", cost_snapshot()
+        _log_benchmark(
+            f"Batch run completed | cases={total} | initial_hits={initial_hits} | final_hits={final_hits} | "
+            f"cost=${total_cost:.6f}"
+        )
+    except Exception as e:
+        _log_benchmark(f"Batch run failed | {type(e).__name__}: {e}")
+        yield f"Batch run failed: {type(e).__name__}", str(e), "", f"Batch run failed: {type(e).__name__}", cost_snapshot()
+
+
 with gr.Blocks(
     title="Discursus",
     theme=gr.themes.Default(),
@@ -691,8 +1355,8 @@ with gr.Blocks(
     /* compact header */
     #header-row { display:flex; align-items:center; gap:12px; padding:6px 10px; }
     #header-row .gr-row { margin:0; }
-    /* make logo compact */
-    #header-row img { height:48px; width:auto; object-fit:contain; }
+    /* logo sizing now controlled by component height */
+    #header-row img { width:auto; object-fit:contain; }
 
     /* compact numeric badges (replace textboxes visually) */
     .badge {
@@ -722,7 +1386,7 @@ with gr.Blocks(
 ) as demo:
     
     # MAIN LAYOUT: Side-by-side conversation and controls
-    with gr.Row():
+    with gr.Row() as home_page_row:
         # LEFT COLUMN: Conversation (main focus) - now gets more space
         with gr.Column(scale=8, min_width=500):
             chatbot = gr.Chatbot(label="Conversation", height=700, type="messages")
@@ -733,7 +1397,7 @@ with gr.Blocks(
             with gr.Row(elem_id="header-row"):
                 with gr.Column(scale=0, min_width=48):
                     logo_url = "https://github.com/alonie/discursus/raw/main/logo.png"
-                    gr.Image(logo_url, height=48, interactive=False, container=False)
+                    logo_image = gr.Image(logo_url, height=144, interactive=False, container=False)
                 with gr.Column(scale=1, min_width=80, elem_id="token-box"):
                     token_count_display = gr.HTML(
                         "<div style='text-align:center;'>"
@@ -763,14 +1427,24 @@ with gr.Blocks(
                 label="📚 Example Questions (🎯 = Demo Scenarios)",
                 value=list(TEST_CASES.keys())[0]
             )
+            open_benchmark_btn = gr.Button("🧪 Open Benchmarking Portal", variant="secondary")
             
             # Input Section
             gr.Markdown("### Send Message")
+            question_size_slider = gr.Slider(
+                minimum=1,
+                maximum=12,
+                value=7,
+                step=1,
+                label="Question Box Height (lines)",
+            )
             user_input = gr.Textbox(
                 label="Your Question",
                 value="",
                 placeholder=POLYCOMB_PROMPT or "Enter your question...",
-                lines=3
+                lines=7,
+                max_lines=7,
+                elem_id="question-box"
             )
             
             with gr.Row():
@@ -882,12 +1556,156 @@ with gr.Blocks(
             download_file_btn = gr.File(label="Download Conversation", interactive=False)
             close_context_btn = gr.Button("Close Context Viewer")
 
+    # Benchmarking Portal (hidden by default; page-like view)
+    with gr.Column(visible=False) as benchmarking_portal_col:
+        gr.Markdown("## Benchmarking Portal")
+        gr.Markdown(
+            "Sequential Epistemic Adversarial Ensemble: Initial answer -> adversarial critique -> revised answer. "
+            "Scores are computed objectively from benchmark answer keys."
+        )
+        gr.Markdown("### Live Monitor")
+        benchmark_live_log_md = gr.Markdown("Idle.")
+        benchmark_live_cost_tb = gr.Textbox(
+            label="Live Cost Estimate",
+            value=_live_cost_text(0, 0, 0.0),
+            interactive=False,
+        )
+        with gr.Row():
+            back_home_btn = gr.Button("⬅ Back to Home", variant="secondary")
+            run_benchmark_btn = gr.Button("Run Sequential Ensemble", variant="primary")
+            run_batch_btn = gr.Button("Run Batch Benchmark", variant="primary")
+
+        with gr.Row():
+            benchmark_file_dd = gr.Dropdown(
+                choices=list(BENCHMARK_FILE_OPTIONS.keys()) or ["No benchmark files found"],
+                value=_default_benchmark_file_label(),
+                label="Benchmark Dataset File",
+            )
+            refresh_benchmark_files_btn = gr.Button("Refresh Files", variant="secondary")
+
+        benchmark_choices = list(BENCHMARK_CASES.keys()) or ["No benchmark cases available"]
+        benchmark_case_dd = gr.Dropdown(
+            choices=benchmark_choices,
+            value=benchmark_choices[0],
+            label="Benchmark Question",
+        )
+        benchmark_question_box = gr.Textbox(
+            label="Question",
+            lines=10,
+            max_lines=20,
+            interactive=False,
+            value=_benchmark_question_text(benchmark_choices[0]) if BENCHMARK_CASES else "No benchmark cases loaded.",
+        )
+
+        with gr.Row():
+            benchmark_initial_model_dd = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="GPT-5 Mini", label="Initial Model")
+            benchmark_critique_model_dd = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="Claude 4.5 Sonnet", label="Critique Model")
+            benchmark_review_model_dd = gr.Dropdown(choices=list(MODEL_MAP.keys()), value="GPT-5 Mini", label="Review Model")
+            benchmark_guardrail_mode_dd = gr.Dropdown(
+                choices=["conservative", "balanced", "off"],
+                value="conservative",
+                label="Guardrail Mode",
+            )
+
+        with gr.Accordion("Stage Prompt Templates (editable)", open=False):
+            benchmark_initial_template_tb = gr.Textbox(
+                label="Initial Prompt Template (use {question})",
+                lines=6,
+                value=BENCHMARK_INITIAL_TEMPLATE,
+            )
+            benchmark_critique_template_tb = gr.Textbox(
+                label="Critique Prompt Template (use {question}, {initial_answer})",
+                lines=6,
+                value=BENCHMARK_CRITIQUE_TEMPLATE,
+            )
+            benchmark_review_template_tb = gr.Textbox(
+                label="Review Prompt Template (use {question}, {initial_answer}, {critique})",
+                lines=6,
+                value=BENCHMARK_REVIEW_TEMPLATE,
+            )
+            batch_max_cases_slider = gr.Slider(
+                minimum=1,
+                maximum=max(1, len(BENCHMARK_CASES)),
+                value=max(1, min(16, len(BENCHMARK_CASES))),
+                step=1,
+                label="Batch Max Cases",
+            )
+
+        benchmark_status_md = gr.Markdown("Idle.")
+        with gr.Accordion("Single-Case Results (Initial Stage Score -> Run Summary)", open=False):
+            with gr.Row():
+                benchmark_initial_score_tb = gr.Textbox(label="Initial Stage Score", interactive=False)
+                benchmark_revised_score_tb = gr.Textbox(label="Revised Stage Score", interactive=False)
+
+            benchmark_initial_output_tb = gr.Textbox(label="Initial Answer Output", lines=10, max_lines=20)
+            benchmark_critique_output_tb = gr.Textbox(label="Critique Output", lines=10, max_lines=20)
+            benchmark_revised_output_tb = gr.Textbox(label="Revised Answer Output", lines=10, max_lines=20)
+            benchmark_summary_tb = gr.Textbox(label="Run Summary", lines=4, max_lines=12)
+        gr.Markdown("### Batch Results")
+        benchmark_batch_status_md = gr.Markdown("Idle.")
+        benchmark_batch_summary_tb = gr.Textbox(label="Batch Summary", lines=8, max_lines=20)
+        benchmark_batch_table_md = gr.Markdown("")
+
     file_state = gr.State([])
     last_critique_state = gr.State("")
 
     def update_input_from_example(example_title):
         """Updates the user input textbox when an example is selected."""
         return gr.update(value=TEST_CASES.get(example_title, ""))
+
+    def open_benchmarking_portal():
+        default_title = _default_benchmark_title()
+        question = _benchmark_question_text(default_title)
+        return (
+            gr.update(visible=False),
+            gr.update(visible=True),
+            gr.update(value=default_title if default_title else "No benchmark cases available"),
+            gr.update(value=question if question else "No benchmark cases loaded."),
+        )
+
+    def close_benchmarking_portal():
+        return gr.update(visible=True), gr.update(visible=False)
+
+    def on_benchmark_case_change(case_title: str):
+        return gr.update(value=_benchmark_question_text(case_title))
+
+    def refresh_benchmark_files():
+        global BENCHMARK_FILE_OPTIONS
+        BENCHMARK_FILE_OPTIONS = _scan_benchmark_files(CONTENT_DIR)
+        labels = list(BENCHMARK_FILE_OPTIONS.keys()) or ["No benchmark files found"]
+        preferred = _default_benchmark_file_label()
+        if preferred not in labels:
+            preferred = labels[0]
+        return gr.update(choices=labels, value=preferred)
+
+    def on_benchmark_file_change(file_label: str):
+        global BENCHMARK_CASES, BENCHMARK_CASES_PATH
+        path = BENCHMARK_FILE_OPTIONS.get(file_label)
+        if not path:
+            return (
+                gr.update(choices=["No benchmark cases available"], value="No benchmark cases available"),
+                gr.update(value="No benchmark cases loaded."),
+                gr.update(maximum=1, value=1),
+                "Benchmark file not found.",
+            )
+
+        BENCHMARK_CASES_PATH = path
+        BENCHMARK_CASES = load_benchmark_cases(path)
+        case_choices = list(BENCHMARK_CASES.keys()) or ["No benchmark cases available"]
+        first_case = case_choices[0]
+        question = _benchmark_question_text(first_case) if BENCHMARK_CASES else "No benchmark cases loaded."
+        max_cases = max(1, len(BENCHMARK_CASES))
+        slider_value = max_cases
+        status = f"Loaded benchmark file: {os.path.basename(path)} ({len(BENCHMARK_CASES)} case(s))"
+        return (
+            gr.update(choices=case_choices, value=first_case),
+            gr.update(value=question),
+            gr.update(maximum=max_cases, value=slider_value),
+            status,
+        )
+
+    def start_batch_run_ui():
+        return "Queued batch run...", "Preparing run...", "", "Queued batch run...", _live_cost_text(0, 0, 0.0)
 
     # Sync model selections between advanced and per-action dropdowns
     def sync_primary_to_send(model):
@@ -902,10 +1720,97 @@ with gr.Blocks(
     def sync_critique_action_to_critique(model):
         return gr.update(value=model)
 
+    def update_question_box_lines(lines):
+        lines = int(lines)
+        return gr.update(lines=lines, max_lines=lines)
+
     example_questions_dd.change(
         fn=update_input_from_example,
         inputs=[example_questions_dd],
         outputs=[user_input]
+    )
+    benchmark_case_dd.change(
+        fn=on_benchmark_case_change,
+        inputs=[benchmark_case_dd],
+        outputs=[benchmark_question_box],
+    )
+    benchmark_file_dd.change(
+        fn=on_benchmark_file_change,
+        inputs=[benchmark_file_dd],
+        outputs=[benchmark_case_dd, benchmark_question_box, batch_max_cases_slider, benchmark_live_log_md],
+    )
+    refresh_benchmark_files_btn.click(
+        fn=refresh_benchmark_files,
+        inputs=[],
+        outputs=[benchmark_file_dd],
+    )
+    open_benchmark_btn.click(
+        fn=open_benchmarking_portal,
+        inputs=[],
+        outputs=[home_page_row, benchmarking_portal_col, benchmark_case_dd, benchmark_question_box],
+    )
+    back_home_btn.click(
+        fn=close_benchmarking_portal,
+        inputs=[],
+        outputs=[home_page_row, benchmarking_portal_col],
+    )
+    run_benchmark_btn.click(
+        fn=run_benchmark_case,
+        inputs=[
+            benchmark_case_dd,
+            benchmark_initial_model_dd,
+            benchmark_critique_model_dd,
+            benchmark_review_model_dd,
+            benchmark_initial_template_tb,
+            benchmark_critique_template_tb,
+            benchmark_review_template_tb,
+            benchmark_guardrail_mode_dd,
+            api_provider_switch,
+        ],
+        outputs=[
+            benchmark_question_box,
+            benchmark_initial_output_tb,
+            benchmark_initial_score_tb,
+            benchmark_critique_output_tb,
+            benchmark_revised_output_tb,
+            benchmark_revised_score_tb,
+            benchmark_summary_tb,
+            benchmark_status_md,
+            benchmark_live_log_md,
+            benchmark_live_cost_tb,
+        ],
+    )
+    run_batch_btn.click(
+        fn=start_batch_run_ui,
+        inputs=[],
+        outputs=[
+            benchmark_batch_status_md,
+            benchmark_batch_summary_tb,
+            benchmark_batch_table_md,
+            benchmark_live_log_md,
+            benchmark_live_cost_tb,
+        ],
+        queue=False,
+    ).then(
+        fn=run_benchmark_batch,
+        inputs=[
+            benchmark_initial_model_dd,
+            benchmark_critique_model_dd,
+            benchmark_review_model_dd,
+            benchmark_initial_template_tb,
+            benchmark_critique_template_tb,
+            benchmark_review_template_tb,
+            benchmark_guardrail_mode_dd,
+            batch_max_cases_slider,
+            api_provider_switch,
+        ],
+        outputs=[
+            benchmark_batch_status_md,
+            benchmark_batch_summary_tb,
+            benchmark_batch_table_md,
+            benchmark_live_log_md,
+            benchmark_live_cost_tb,
+        ],
     )
 
     # Sync model selections
@@ -914,7 +1819,22 @@ with gr.Blocks(
     critique_model.change(sync_critique_to_critique, [critique_model], [critique_model_dropdown])
     critique_model_dropdown.change(sync_critique_action_to_critique, [critique_model_dropdown], [critique_model])
     api_provider_switch.change(lambda v: _status_html(v), [api_provider_switch], [status_display])
-
+    question_size_slider.input(
+        fn=None,
+        inputs=[question_size_slider],
+        outputs=[],
+        js="""
+        (lines) => {
+            const el = document.querySelector("#question-box textarea");
+            if (el) {
+                const rows = Math.max(1, Math.round(lines));
+                el.rows = rows;
+                el.style.height = "auto";
+            }
+        }
+        """,
+    )
+    question_size_slider.change(update_question_box_lines, [question_size_slider], [user_input])
     def handle_view_context(history: List[dict]):
         """Formats the conversation history for viewing and downloading."""
         if not history:
