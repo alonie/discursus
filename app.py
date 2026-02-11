@@ -1678,7 +1678,7 @@ with gr.Blocks(
             preferred = labels[0]
         return gr.update(choices=labels, value=preferred)
 
-    def on_benchmark_file_change(file_label: str):
+    def on_benchmark_file_change(file_label: str, current_max_cases: int):
         global BENCHMARK_CASES, BENCHMARK_CASES_PATH
         path = BENCHMARK_FILE_OPTIONS.get(file_label)
         if not path:
@@ -1695,7 +1695,11 @@ with gr.Blocks(
         first_case = case_choices[0]
         question = _benchmark_question_text(first_case) if BENCHMARK_CASES else "No benchmark cases loaded."
         max_cases = max(1, len(BENCHMARK_CASES))
-        slider_value = max_cases
+        try:
+            requested = int(current_max_cases)
+        except Exception:
+            requested = min(25, max_cases)
+        slider_value = max(1, min(requested, max_cases))
         status = f"Loaded benchmark file: {os.path.basename(path)} ({len(BENCHMARK_CASES)} case(s))"
         return (
             gr.update(choices=case_choices, value=first_case),
@@ -1704,8 +1708,18 @@ with gr.Blocks(
             status,
         )
 
-    def start_batch_run_ui():
-        return "Queued batch run...", "Preparing run...", "", "Queued batch run...", _live_cost_text(0, 0, 0.0)
+    def start_batch_run_ui(max_cases: int):
+        try:
+            n = int(max_cases)
+        except Exception:
+            n = -1
+        return (
+            "Queued batch run...",
+            "Preparing run...",
+            "",
+            f"Queued batch run (max cases={n if n > 0 else 'unknown'})...",
+            _live_cost_text(0, 0, 0.0),
+        )
 
     # Sync model selections between advanced and per-action dropdowns
     def sync_primary_to_send(model):
@@ -1736,7 +1750,7 @@ with gr.Blocks(
     )
     benchmark_file_dd.change(
         fn=on_benchmark_file_change,
-        inputs=[benchmark_file_dd],
+        inputs=[benchmark_file_dd, batch_max_cases_slider],
         outputs=[benchmark_case_dd, benchmark_question_box, batch_max_cases_slider, benchmark_live_log_md],
     )
     refresh_benchmark_files_btn.click(
@@ -1782,7 +1796,7 @@ with gr.Blocks(
     )
     run_batch_btn.click(
         fn=start_batch_run_ui,
-        inputs=[],
+        inputs=[batch_max_cases_slider],
         outputs=[
             benchmark_batch_status_md,
             benchmark_batch_summary_tb,
